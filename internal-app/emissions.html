@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Emissions — Coca-Cola Sustainability</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    body { background: #f0f2f5; }
+    .navbar-brand span { color: #F40009; }
+    #map { height: 420px; border-radius: 8px; }
+    .table th { white-space: nowrap; }
+    .grade-badge-a { background:#198754; color:#fff; }
+    .grade-badge-b { background:#ffc107; color:#000; }
+    .grade-badge-c { background:#dc3545; color:#fff; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark" style="background:#1a1a2e">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="index.html"><span>●</span> Coca-Cola Sustainability</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="nav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="emissions.html">Emissions</a></li>
+          <li class="nav-item"><a class="nav-link" href="rvm-impact.html">RVM Impact</a></li>
+          <li class="nav-item"><a class="nav-link" href="ai-insights.html">AI Insights</a></li>
+        </ul>
+        <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h4 class="fw-bold mb-0">Emissions by Area</h4>
+        <p class="text-muted small mb-0">FY 2023 · MTCO₂e · Graded A–C within peer group</p>
+      </div>
+      <div class="btn-group" role="group">
+        <button class="btn btn-sm btn-outline-secondary" onclick="load('country')" id="btn-country">Countries</button>
+        <button class="btn btn-sm btn-secondary active" onclick="load('state')" id="btn-state">States / Provinces</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="load('city')" id="btn-city">Cities</button>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-2">
+        <div id="map"></div>
+        <div class="mt-2 d-flex gap-3 px-2">
+          <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#198754"></span> Grade A</span>
+          <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ffc107"></span> Grade B</span>
+          <span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#dc3545"></span> Grade C</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- BAR CHART -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white fw-semibold">Top Areas by Raw Emissions (MTCO₂e)</div>
+      <div class="card-body">
+        <canvas id="chart" height="90"></canvas>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between">
+        <span>Detailed Breakdown</span>
+        <span id="areaCount" class="text-muted small"></span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Area</th>
+                <th>Grade</th>
+                <th>Total MTCO₂e</th>
+                <th>Trucking</th>
+                <th>Factory</th>
+                <th>Energy</th>
+                <th>RVMs</th>
+                <th>EV Fleet %</th>
+                <th>Renewable %</th>
+                <th>Final Score</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!checkAuth()) throw new Error('unauth');
+    setActivePage();
+
+    let map = L.map('map').setView([39.5, -80], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let markers = [];
+    let chart = null;
+    let currentType = 'state';
+
+    function clearMarkers() { markers.forEach(m => map.removeLayer(m)); markers = []; }
+
+    async function load(type) {
+      currentType = type;
+      ['country','state','city'].forEach(t => {
+        document.getElementById('btn-' + t).classList.toggle('btn-secondary', t === type);
+        document.getElementById('btn-' + t).classList.toggle('btn-outline-secondary', t !== type);
+        document.getElementById('btn-' + t).classList.toggle('active', t === type);
+      });
+
+      const res = await apiFetch('/api/emissions/grades?type=' + type);
+      if (!res) return;
+      const data = await res.json();
+
+      document.getElementById('areaCount').textContent = data.length + ' areas';
+
+      // Map markers
+      clearMarkers();
+      const mapCenter = type === 'city' ? [30, -90] : type === 'country' ? [25, -100] : [39.5, -80];
+      const zoom = type === 'city' ? 4 : type === 'country' ? 3 : 4;
+      map.setView(mapCenter, zoom);
+
+      data.forEach(a => {
+        if (!a.latitude || !a.longitude) return;
+        const color = a.grade === 'A' ? '#198754' : a.grade === 'B' ? '#ffc107' : '#dc3545';
+        const m = L.circleMarker([a.latitude, a.longitude], {
+          radius: type === 'country' ? 14 : type === 'state' ? 8 : 6,
+          fillColor: color, color: '#fff', weight: 1.5,
+          opacity: 1, fillOpacity: 0.85
+        }).bindPopup(`
+          <strong>${a.name}</strong><br>
+          Grade: <strong>${a.grade}</strong><br>
+          Total: ${fmt(a.rawScore)} MTCO₂e<br>
+          Final Score: ${fmt(a.finalScore)}<br>
+          RVMs: ${a.rvmCount} | EV: ${a.evPct}% | Renewable: ${a.renewablePct}%
+        `).addTo(map);
+        markers.push(m);
+      });
+
+      // Bar chart (top 20)
+      const top20 = data.slice(0, 20);
+      const labels = top20.map(a => a.name);
+      const values = top20.map(a => a.rawScore);
+      const colors = top20.map(a => a.grade === 'A' ? '#198754' : a.grade === 'B' ? '#ffc107' : '#dc3545');
+
+      if (chart) chart.destroy();
+      chart = new Chart(document.getElementById('chart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'MTCO₂e',
+            data: values,
+            backgroundColor: colors,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: v => fmt(v) } },
+            x: { ticks: { maxRotation: 45 } }
+          }
+        }
+      });
+
+      // Table
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = data.map((a, i) => `
+        <tr>
+          <td class="text-muted">${i + 1}</td>
+          <td class="fw-semibold">${a.name}</td>
+          <td>${gradeBadge(a.grade)}</td>
+          <td>${fmt(a.rawScore)}</td>
+          <td>${fmt(a.trucking)}</td>
+          <td>${fmt(a.factory)}</td>
+          <td>${fmt(a.energy)}</td>
+          <td>${a.rvmCount}</td>
+          <td>${a.evPct}%</td>
+          <td>${a.renewablePct}%</td>
+          <td>${fmt(a.finalScore)}</td>
+        </tr>
+      `).join('');
+    }
+
+    load('state');
+  </script>
+</body>
+</html>

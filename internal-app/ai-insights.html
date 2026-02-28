@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Insights — Coca-Cola Sustainability</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f2f5; }
+    .navbar-brand span { color: #F40009; }
+    .kpi-card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .insight-card { border-left: 5px solid #F40009; }
+    .chat-box { height: 400px; overflow-y: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,.05); }
+    .msg { margin-bottom: 15px; max-width: 85%; padding: 12px 16px; border-radius: 18px; position: relative; }
+    .msg-user { background: #1a1a2e; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 4px; }
+    .msg-ai { background: #f8f9fa; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #dee2e6; }
+    .ai-typing { font-style: italic; color: #6c757d; font-size: 0.85rem; }
+    .x-small { font-size: 0.7rem; }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg navbar-dark" style="background:#1a1a2e">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="index.html"><span>●</span> Coca-Cola Sustainability</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="nav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="emissions.html">Emissions</a></li>
+          <li class="nav-item"><a class="nav-link" href="rvm-impact.html">RVM Impact</a></li>
+          <li class="nav-item"><a class="nav-link" href="ai-insights.html">AI Insights</a></li>
+        </ul>
+        <span class="navbar-text me-3 text-white-50 small" id="adminName"></span>
+        <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-4 px-4">
+    <div class="mb-4">
+      <h4 class="fw-bold mb-0">Gemini AI Insights</h4>
+      <p class="text-muted small">Actionable recommendations powered by Google Gemini 1.5 Flash.</p>
+    </div>
+
+    <div class="row g-4">
+      <!-- PRE-GENERATED INSIGHTS -->
+      <div class="col-lg-7">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="fw-bold mb-0">Strategy Recommendations</h6>
+          <select class="form-select form-select-sm w-auto" id="areaFilter" onchange="loadInsights()">
+            <option value="">All Areas</option>
+          </select>
+        </div>
+        
+        <div id="insightsList">
+          <div class="text-center py-5">
+            <div class="spinner-border text-danger" role="status"></div>
+            <p class="mt-2 text-muted">Analyzing sustainability data...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE QUERY -->
+      <div class="col-lg-5">
+        <div class="card kpi-card h-100">
+          <div class="card-header bg-white py-3 fw-semibold border-bottom">
+            Live AI Consultant
+          </div>
+          <div class="card-body d-flex flex-column">
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Select Context Area</label>
+              <select class="form-select form-select-sm" id="queryArea">
+                <option value="">Choose an area...</option>
+              </select>
+            </div>
+
+            <div class="chat-box d-flex flex-column mb-3" id="chatBox">
+              <div class="msg msg-ai">
+                Hello! I am your Gemini sustainability consultant. Select an area above and ask me anything about its carbon footprint or reduction strategies.
+              </div>
+            </div>
+
+            <div class="input-group">
+              <input type="text" id="userInput" class="form-control" placeholder="Ask a question..." onkeypress="if(event.key==='Enter') sendQuery()">
+              <button class="btn btn-danger" type="button" onclick="sendQuery()" id="sendBtn">Ask</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!checkAuth()) throw new Error('unauth');
+    document.getElementById('adminName').textContent = localStorage.getItem('adminName') || '';
+    setActivePage();
+
+    async function loadAreas() {
+      const res = await apiFetch('/api/areas');
+      const areas = await res.json();
+      const filter = document.getElementById('areaFilter');
+      const query = document.getElementById('queryArea');
+      
+      areas.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.name;
+        filter.appendChild(opt.cloneNode(true));
+        query.appendChild(opt);
+      });
+    }
+
+    async function loadInsights() {
+      const areaId = document.getElementById('areaFilter').value;
+      const res = await apiFetch(`/api/insights${areaId ? '?areaId=' + areaId : ''}`);
+      const data = await res.json();
+      
+      const list = document.getElementById('insightsList');
+      if (data.length === 0) {
+        list.innerHTML = `
+          <div class="card kpi-card p-5 text-center">
+            <p class="text-muted mb-0">No insights found for this area. Gemini will generate them during the next scheduled analysis.</p>
+          </div>
+        `;
+        return;
+      }
+
+      list.innerHTML = data.map(i => `
+        <div class="card kpi-card p-4 mb-3 insight-card">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h6 class="fw-bold mb-0">${i.areaName}</h6>
+              <span class="text-muted x-small">${new Date(i.generatedAt).toLocaleDateString()}</span>
+            </div>
+            ${gradeBadge(i.grade)}
+          </div>
+          <p class="small mb-0 text-secondary" style="white-space: pre-wrap;">${i.insightText}</p>
+        </div>
+      `).join('');
+    }
+
+    async function sendQuery() {
+      const areaId = document.getElementById('queryArea').value;
+      const input = document.getElementById('userInput');
+      const chat = document.getElementById('chatBox');
+      const btn = document.getElementById('sendBtn');
+      const question = input.value.trim();
+
+      if (!areaId) { alert('Please select a context area first.'); return; }
+      if (!question) return;
+
+      // Add user message
+      const uMsg = document.createElement('div');
+      uMsg.className = 'msg msg-user';
+      uMsg.textContent = question;
+      chat.appendChild(uMsg);
+      input.value = '';
+      chat.scrollTop = chat.scrollHeight;
+
+      // Add typing indicator
+      const tMsg = document.createElement('div');
+      tMsg.className = 'msg msg-ai ai-typing';
+      tMsg.id = 'typing';
+      tMsg.textContent = 'Gemini is thinking...';
+      chat.appendChild(tMsg);
+      chat.scrollTop = chat.scrollHeight;
+
+      btn.disabled = true;
+
+      try {
+        const res = await apiFetch('/api/insights/query', {
+          method: 'POST',
+          body: JSON.stringify({ areaId: parseInt(areaId), question })
+        });
+        const data = await res.json();
+        
+        document.getElementById('typing').remove();
+        const aMsg = document.createElement('div');
+        aMsg.className = 'msg msg-ai';
+        aMsg.textContent = data.answer;
+        chat.appendChild(aMsg);
+      } catch (e) {
+        document.getElementById('typing').textContent = 'Error: Failed to connect to Gemini.';
+      } finally {
+        btn.disabled = false;
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+
+    loadAreas();
+    loadInsights();
+  </script>
+</body>
+</html>

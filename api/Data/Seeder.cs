@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Data.Sqlite;
 using api.Data;
+using api.Services;
 
 public static class Seeder
 {
@@ -9,7 +10,7 @@ public static class Seeder
     record CityData(string Name, string ParentName, double Lat, double Lon, double TotalMtco2e, int RvmCount, double EvPct, double RenewablePct);
     record RvmMachine(string CityName, string LocationName, double Lat, double Lon);
 
-    public static async Task SeedAsync(Database db, IConfiguration config)
+    public static async Task SeedAsync(Database db, IConfiguration config, GeminiService gemini)
     {
         using var conn = db.Connect();
         conn.Open();
@@ -260,7 +261,76 @@ public static class Seeder
         ComputeGrades(conn);
 
         tx.Commit();
-        await Task.CompletedTask;
+
+        // ── AI INSIGHTS (Post-commit) ────────────────────────────────────────
+        await SeedAiInsights(db, gemini);
+    }
+
+    private static async Task SeedAiInsights(Database db, GeminiService gemini)
+    {
+        using var conn = db.Connect();
+        conn.Open();
+
+        // Target: 3 countries + 5 worst states
+        var targetCmd = conn.CreateCommand();
+        targetCmd.CommandText = """
+            SELECT id, name, type FROM areas WHERE type = 'country'
+            UNION ALL
+            SELECT a.id, a.name, a.type FROM areas a
+            JOIN emission_grades eg ON a.id = eg.area_id
+            WHERE a.type = 'state'
+            ORDER BY eg.raw_score DESC LIMIT 5
+        """;
+
+        var targets = new List<(int Id, string Name, string Type)>();
+        using (var reader = targetCmd.ExecuteReader())
+        {
+            while (reader.Read()) targets.Add((reader.GetInt32(0), reader.GetString(1), reader.GetString(2)));
+        }
+
+        foreach (var t in targets)
+        {
+            // Gather context for Gemini
+            var ctxCmd = conn.CreateCommand();
+            ctxCmd.CommandText = """
+                SELECT 
+                    eg.grade, eg.raw_score,
+                    (SELECT amount_mtco2e FROM emissions_data WHERE area_id = $id AND category = 'trucking') as trucking,
+                    (SELECT amount_mtco2e FROM emissions_data WHERE area_id = $id AND category = 'factory') as factory,
+                    (SELECT amount_mtco2e FROM emissions_data WHERE area_id = $id AND category = 'energy') as energy,
+                    (SELECT amount_mtco2e FROM emissions_data WHERE area_id = $id AND category IN ('refrigeration', 'packaging')) as other,
+                    (SELECT value FROM carbon_initiatives WHERE area_id = $id AND initiative_type = 'rvm') as rvm_count,
+                    (SELECT value FROM carbon_initiatives WHERE area_id = $id AND initiative_type = 'ev_fleet') as ev_pct,
+                    (SELECT value FROM carbon_initiatives WHERE area_id = $id AND initiative_type = 'renewable_energy') as re_pct
+                FROM emission_grades eg WHERE eg.area_id = $id
+            """;
+            ctxCmd.Parameters.AddWithValue("$id", t.Id);
+
+            using var reader = ctxCmd.ExecuteReader();
+            if (reader.Read())
+            {
+                var grade = reader.GetString(0);
+                var total = reader.GetDouble(1);
+                var trucking = reader.GetDouble(2);
+                var factory = reader.GetDouble(3);
+                var energy = reader.GetDouble(4);
+                var other = reader.IsDBNull(5) ? 0 : reader.GetDouble(5);
+                var rvm = (int)reader.GetDouble(6);
+                var ev = reader.GetDouble(7);
+                var re = reader.GetDouble(8);
+
+                var insight = await gemini.GenerateInsight(t.Name, t.Type, grade, total, 
+                    (trucking/total)*100, (factory/total)*100, (energy/total)*100, (other/total)*100, 
+                    rvm, ev, re);
+
+                var insCmd = conn.CreateCommand();
+                insCmd.CommandText = "INSERT INTO ai_insights (area_id, insight_text, suggestion_type, generated_at) VALUES ($id, $text, 'strategic', $now)";
+                insCmd.Parameters.AddWithValue("$id", t.Id);
+                insCmd.Parameters.AddWithValue("$text", insight);
+                insCmd.Parameters.AddWithValue("$now", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"));
+                insCmd.ExecuteNonQuery();
+            }
+        }
     }
 
     // ── HELPERS ──────────────────────────────────────────────────────────────
@@ -333,11 +403,8 @@ public static class Seeder
         }
     }
 
-    // Grade formula:
-    //   raw_score         = total MTCO2e for area (2023)
-    //   initiative_deduct = rvm_count*200 + ev_pct*500 + renewable_pct*300
-    //   final_score       = max(0, raw_score - initiative_deduct)
-    //   grade within peer group (same type): bottom 33% = A, mid 33% = B, top 33% = C
+    public static void RecomputeGrades(SqliteConnection conn) => ComputeGrades(conn);
+
     private static void ComputeGrades(SqliteConnection conn)
     {
         var scoreCmd = conn.CreateCommand();

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scan — Coca-Cola Rewards</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; padding-bottom: 80px; }
+    .nav-bottom { background: white; border-top: 1px solid #dee2e6; position: fixed; bottom: 0; width: 100%; z-index: 1000; }
+    .nav-bottom .nav-link { color: #6c757d; font-size: 0.75rem; text-align: center; }
+    .nav-bottom .nav-link.active { color: #F40009; font-weight: bold; }
+    
+    .scan-card { border: none; border-radius: 20px; overflow: hidden; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem;}
+    
+    /* Animation for success */
+    @keyframes pop {
+      0% { transform: scale(0.8); opacity: 0; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .success-icon { animation: pop 0.5s ease-out forwards; width: 80px; height: 80px; background: #d1e7dd; color: #0f5132; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; }
+    
+    .points-badge { background: #F40009; color: white; padding: 0.5rem 1rem; border-radius: 50px; font-weight: bold; font-size: 1.25rem; display: inline-block; margin-top: 1rem; }
+    
+    .scanner-placeholder { width: 200px; height: 200px; border: 4px dashed #ced4da; border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem auto; position: relative; }
+    .scanner-line { position: absolute; width: 100%; height: 4px; background: rgba(244, 0, 9, 0.5); top: 50%; box-shadow: 0 0 10px rgba(244, 0, 9, 0.8); animation: scan 2s infinite linear; }
+    
+    @keyframes scan {
+      0% { top: 10%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { top: 90%; opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid px-4 py-3">
+    <div class="d-flex align-items-center mb-4">
+      <a href="index.html" class="text-dark me-3">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+        </svg>
+      </a>
+      <h5 class="fw-bold mb-0">Scan Bottle</h5>
+    </div>
+
+    <div class="card scan-card shadow-sm bg-white" id="scanContainer">
+      <!-- Loading State -->
+      <div id="loadingState">
+        <div class="spinner-border text-danger mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h5>Processing Scan...</h5>
+        <p class="text-muted small">Communicating with the RVM.</p>
+      </div>
+
+      <!-- Instruction State -->
+      <div id="instructionState" class="d-none w-100">
+        <div class="scanner-placeholder">
+          <div class="scanner-line"></div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#adb5bd" viewBox="0 0 16 16">
+            <path d="M.5 1a.5.5 0 0 0-.5.5v2a.5.5 0 0 0 1 0v-1.5h1.5a.5.5 0 0 0 0-1H.5Zm15 0a.5.5 0 0 0-.5-.5h-1.5a.5.5 0 0 0 0 1H15v1.5a.5.5 0 0 0 1 0v-2a.5.5 0 0 0-.5-.5ZM.5 15a.5.5 0 0 0 .5.5h1.5a.5.5 0 0 0 0-1H1v-1.5a.5.5 0 0 0-1 0v2Zm15 0a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-1 0v1.5h-1.5a.5.5 0 0 0 0 1H15.5Z"/>
+            <path d="M3 4.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-7Zm1 1v5h7v-5H4Z"/>
+          </svg>
+        </div>
+        <h5 class="fw-bold">Ready to Scan</h5>
+        <p class="text-muted small mb-0">Find a Coca-Cola Reverse Vending Machine and scan its QR code to earn points.</p>
+      </div>
+
+      <!-- Success State -->
+      <div id="successState" class="d-none w-100">
+        <div class="success-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+          </svg>
+        </div>
+        <h4 class="fw-bold">Scan Successful!</h4>
+        <p class="text-muted small">Thank you for recycling and supporting our sustainability goals.</p>
+        <div class="points-badge">+2 Points</div>
+        <div class="mt-4">
+          <a href="index.html" class="btn btn-outline-dark rounded-pill px-4">Back to Home</a>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div id="errorState" class="d-none w-100">
+        <div class="success-icon" style="background:#f8d7da; color:#842029;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+          </svg>
+        </div>
+        <h4 class="fw-bold">Scan Failed</h4>
+        <p class="text-muted small" id="errorMsg">There was an issue processing your scan.</p>
+        <div class="mt-4">
+          <button onclick="window.location.reload()" class="btn btn-outline-dark rounded-pill px-4">Try Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="nav-bottom py-2">
+    <div class="container d-flex justify-content-around">
+      <a href="index.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z"/>
+        </svg>
+        Home
+      </a>
+      <a href="scan.html" class="nav-link active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0v-3Zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5ZM.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5Zm15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5Z"/>
+        </svg>
+        Scan
+      </a>
+      <a href="rewards.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M3 2.5a.5.5 0 0 1 .5-.5L4 2l.5.5a.5.5 0 0 1 0 1L4 4l-.5-.5a.5.5 0 0 1-.5-.5zM5 2a.5.5 0 0 1 .5-.5L6 1l.5.5a.5.5 0 0 1 0 1L6 3l-.5-.5a.5.5 0 0 1-.5-.5zM0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2z"/>
+        </svg>
+        Rewards
+      </a>
+      <a href="history.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0z"/>
+          <path d="M8.5 4.5a.5.5 0 0 0-1 0v3.31l-2.062 1.375a.5.5 0 1 0 .554.832l2.25-1.5a.5.5 0 0 0 .258-.422V4.5z"/>
+        </svg>
+        History
+      </a>
+    </div>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!checkAuth()) throw new Error('unauth');
+    setActivePage();
+
+    function showState(stateId) {
+      ['loadingState', 'instructionState', 'successState', 'errorState'].forEach(id => {
+        document.getElementById(id).classList.add('d-none');
+      });
+      document.getElementById(stateId).classList.remove('d-none');
+    }
+
+    async function processScan() {
+      const params = new URLSearchParams(window.location.search);
+      const rvmId = params.get('rvm_id');
+      const barcode = params.get('barcode');
+
+      if (!rvmId) {
+        showState('instructionState');
+        return;
+      }
+
+      showState('loadingState');
+
+      try {
+        const res = await apiFetch('/api/rvm/scan', {
+          method: 'POST',
+          body: JSON.stringify({ rvmId: parseInt(rvmId), barcode })
+        });
+
+        if (res && res.ok) {
+          showState('successState');
+          // Clear URL params so refresh doesn't rescan
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          const data = await res?.json();
+          document.getElementById('errorMsg').textContent = data?.message || 'Failed to record scan.';
+          showState('errorState');
+        }
+      } catch (e) {
+        document.getElementById('errorMsg').textContent = 'Connection error. Please try again.';
+        showState('errorState');
+      }
+    }
+
+    // Give a slight delay for realism if auto-processing
+    setTimeout(processScan, 800);
+  </script>
+</body>
+</html>

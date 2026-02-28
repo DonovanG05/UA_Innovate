@@ -1,0 +1,90 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using api.Data;
+
+namespace api.Controllers;
+
+[ApiController]
+[Route("api/dashboard")]
+[Authorize(Roles = "admin")]
+public class DashboardController : ControllerBase
+{
+    private readonly Database _db;
+    public DashboardController(Database db) => _db = db;
+
+    // GET /api/dashboard/summary
+    [HttpGet("summary")]
+    public IActionResult Summary()
+    {
+        using var conn = _db.Connect();
+        conn.Open();
+
+        // Total emissions from all US state + Canadian province + Mexican state rows (year 2023)
+        var totalCmd = conn.CreateCommand();
+        totalCmd.CommandText = """
+            SELECT COALESCE(SUM(ed.amount_mtco2e), 0)
+            FROM emissions_data ed
+            JOIN areas a ON a.id = ed.area_id
+            WHERE a.type = 'country' AND ed.year = 2023
+        """;
+        var totalEmissions = (double)(long)totalCmd.ExecuteScalar()!;
+        // SQLite SUM returns real, cast accordingly
+        var totalCmd2 = conn.CreateCommand();
+        totalCmd2.CommandText = """
+            SELECT CAST(COALESCE(SUM(ed.amount_mtco2e), 0) AS REAL)
+            FROM emissions_data ed
+            JOIN areas a ON a.id = ed.area_id
+            WHERE a.type = 'country' AND ed.year = 2023
+        """;
+        totalEmissions = Convert.ToDouble(totalCmd2.ExecuteScalar());
+
+        // Grade counts for states
+        var gradeCmd = conn.CreateCommand();
+        gradeCmd.CommandText = """
+            SELECT eg.grade, COUNT(*) as cnt
+            FROM emission_grades eg
+            JOIN areas a ON a.id = eg.area_id
+            WHERE a.type = 'state'
+            GROUP BY eg.grade
+        """;
+        var grades = new Dictionary<string, int> { ["A"] = 0, ["B"] = 0, ["C"] = 0 };
+        using (var r = gradeCmd.ExecuteReader())
+            while (r.Read()) grades[r.GetString(0)] = (int)r.GetInt64(1);
+
+        // Total RVM scans ever
+        var scansCmd = conn.CreateCommand();
+        scansCmd.CommandText = "SELECT COUNT(*) FROM rvm_scans";
+        var totalScans = (long)scansCmd.ExecuteScalar()!;
+
+        // Top 5 worst states (highest final_score = worst)
+        var worstCmd = conn.CreateCommand();
+        worstCmd.CommandText = """
+            SELECT a.name, eg.grade, CAST(eg.raw_score AS REAL), CAST(eg.final_score AS REAL)
+            FROM emission_grades eg
+            JOIN areas a ON a.id = eg.area_id
+            WHERE a.type = 'state'
+            ORDER BY eg.final_score DESC
+            LIMIT 5
+        """;
+        var worst = new List<object>();
+        using (var r = worstCmd.ExecuteReader())
+            while (r.Read())
+                worst.Add(new { name = r.GetString(0), grade = r.GetString(1), rawScore = r.GetDouble(2), finalScore = r.GetDouble(3) });
+
+        // Active RVM machine count
+        var rvmCmd = conn.CreateCommand();
+        rvmCmd.CommandText = "SELECT COUNT(*) FROM rvm_machines WHERE active = 1";
+        var rvmCount = (long)rvmCmd.ExecuteScalar()!;
+
+        return Ok(new
+        {
+            totalEmissionsMtco2e = totalEmissions,
+            gradeA = grades["A"],
+            gradeB = grades["B"],
+            gradeC = grades["C"],
+            totalRvmScans = totalScans,
+            activeRvms = rvmCount,
+            worstAreas = worst
+        });
+    }
+}

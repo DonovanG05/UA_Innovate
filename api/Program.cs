@@ -5,7 +5,8 @@ using api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<Database>();
+builder.Services.AddSingleton<api.Data.Database>();
+builder.Services.AddHttpClient<api.Services.GeminiService>();
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {
@@ -31,9 +32,10 @@ builder.Services.AddAuthorization();
 var app = builder.Build();
 
 // Initialize schema and seed data on startup
-var db = app.Services.GetRequiredService<Database>();
+var db = app.Services.GetRequiredService<api.Data.Database>();
+var gemini = app.Services.GetRequiredService<api.Services.GeminiService>();
 db.InitializeSchema();
-await Seeder.SeedAsync(db, app.Configuration);
+await Seeder.SeedAsync(db, app.Configuration, gemini);
 
 app.UseCors();
 app.UseAuthentication();

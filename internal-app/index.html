@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — Coca-Cola Sustainability</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f2f5; }
+    .navbar-brand span { color: #F40009; }
+    .kpi-card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .kpi-value { font-size: 2rem; font-weight: 700; }
+    .grade-a { color: #198754; }
+    .grade-b { color: #e6a817; }
+    .grade-c { color: #dc3545; }
+    .worst-badge { font-size: .75rem; }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg navbar-dark" style="background:#1a1a2e">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="index.html"><span>●</span> Coca-Cola Sustainability</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="nav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="emissions.html">Emissions</a></li>
+          <li class="nav-item"><a class="nav-link" href="rvm-impact.html">RVM Impact</a></li>
+          <li class="nav-item"><a class="nav-link" href="ai-insights.html">AI Insights</a></li>
+        </ul>
+        <span class="navbar-text me-3 text-white-50 small" id="adminName"></span>
+        <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="fw-bold mb-0">Sustainability Overview</h4>
+        <p class="text-muted small mb-0">North America · FY 2023</p>
+      </div>
+      <span class="badge bg-secondary">Last updated: 2023</span>
+    </div>
+
+    <!-- KPI ROW -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-xl-2">
+        <div class="card kpi-card h-100 p-3">
+          <p class="text-muted small mb-1">Total Emissions</p>
+          <div class="kpi-value" id="kpiTotal">—</div>
+          <p class="small text-muted mb-0">MTCO₂e</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-2">
+        <div class="card kpi-card h-100 p-3">
+          <p class="text-muted small mb-1">Grade A Areas</p>
+          <div class="kpi-value grade-a" id="kpiA">—</div>
+          <p class="small text-muted mb-0">Low emissions</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-2">
+        <div class="card kpi-card h-100 p-3">
+          <p class="text-muted small mb-1">Grade B Areas</p>
+          <div class="kpi-value grade-b" id="kpiB">—</div>
+          <p class="small text-muted mb-0">Medium emissions</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-2">
+        <div class="card kpi-card h-100 p-3">
+          <p class="text-muted small mb-1">Grade C Areas</p>
+          <div class="kpi-value grade-c" id="kpiC">—</div>
+          <p class="small text-muted mb-0">High emissions</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-2">
+        <div class="card kpi-card h-100 p-3">
+          <p class="text-muted small mb-1">Active RVMs</p>
+          <div class="kpi-value" id="kpiRvms">—</div>
+          <p class="small text-muted mb-0">Deployed units</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-2">
+        <div class="card kpi-card h-100 p-3">
+          <p class="text-muted small mb-1">Bottles Recycled</p>
+          <div class="kpi-value" id="kpiScans">—</div>
+          <p class="small text-muted mb-0">Via RVM scans</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORST AREAS TABLE -->
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="card kpi-card">
+          <div class="card-header bg-white border-bottom fw-semibold">
+            <span style="color:#dc3545">⚠</span> Priority Areas — Highest Emissions
+          </div>
+          <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Area</th>
+                  <th>Grade</th>
+                  <th>Raw MTCO₂e</th>
+                  <th>Final Score</th>
+                </tr>
+              </thead>
+              <tbody id="worstTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card kpi-card h-100">
+          <div class="card-header bg-white border-bottom fw-semibold">
+            About the Grading System
+          </div>
+          <div class="card-body">
+            <p class="mb-2">Each area is scored based on:</p>
+            <ul class="mb-3">
+              <li><strong>Raw Score:</strong> Total MTCO₂e from trucking, factory, energy, refrigeration &amp; packaging</li>
+              <li><strong>Initiative Deduction:</strong> Points removed for RVM deployments, EV fleet %, and renewable energy %</li>
+              <li><strong>Final Score:</strong> Raw − Deduction (lower = better)</li>
+            </ul>
+            <div class="d-flex gap-3">
+              <span class="badge bg-success p-2">A — Bottom 33%</span>
+              <span class="badge bg-warning text-dark p-2">B — Middle 33%</span>
+              <span class="badge bg-danger p-2">C — Top 33%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!checkAuth()) throw new Error('unauth');
+    document.getElementById('adminName').textContent = localStorage.getItem('adminName') || '';
+    setActivePage();
+
+    async function load() {
+      const res = await apiFetch('/api/dashboard/summary');
+      if (!res) return;
+      const d = await res.json();
+
+      document.getElementById('kpiTotal').textContent = fmt(d.totalEmissionsMtco2e);
+      document.getElementById('kpiA').textContent = d.gradeA;
+      document.getElementById('kpiB').textContent = d.gradeB;
+      document.getElementById('kpiC').textContent = d.gradeC;
+      document.getElementById('kpiRvms').textContent = fmt(d.activeRvms);
+      document.getElementById('kpiScans').textContent = fmt(d.totalRvmScans);
+
+      const tbody = document.getElementById('worstTable');
+      tbody.innerHTML = d.worstAreas.map(a => `
+        <tr>
+          <td class="fw-semibold">${a.name}</td>
+          <td>${gradeBadge(a.grade)}</td>
+          <td>${fmt(a.rawScore)}</td>
+          <td>${fmt(a.finalScore)}</td>
+        </tr>
+      `).join('');
+    }
+
+    load();
+  </script>
+</body>
+</html>

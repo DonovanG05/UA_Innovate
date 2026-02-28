@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rewards — Coca-Cola Rewards</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; padding-bottom: 80px; }
+    .nav-bottom { background: white; border-top: 1px solid #dee2e6; position: fixed; bottom: 0; width: 100%; z-index: 1000; }
+    .nav-bottom .nav-link { color: #6c757d; font-size: 0.75rem; text-align: center; }
+    .nav-bottom .nav-link.active { color: #F40009; font-weight: bold; }
+    
+    .milestone-card { border: none; border-radius: 16px; margin-bottom: 1rem; position: relative; overflow: hidden; }
+    .milestone-locked { background: #e9ecef; color: #6c757d; }
+    .milestone-locked::after { content: '🔒'; position: absolute; right: 1.5rem; top: 50%; transform: translateY(-50%); font-size: 1.5rem; opacity: 0.5; }
+    
+    .milestone-unlocked { background: #1a1a2e; color: white; }
+    .milestone-unlocked::after { content: ''; position: absolute; right: -20px; top: -20px; width: 80px; height: 80px; background: rgba(244,0,9,0.2); border-radius: 50%; }
+    
+    .coupon-card { border-left: 4px solid #F40009; background: white; border-radius: 8px; margin-bottom: 1rem; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .coupon-code { font-family: monospace; font-size: 1.25rem; font-weight: bold; letter-spacing: 2px; color: #F40009; background: #fff3f3; padding: 0.5rem 1rem; border-radius: 8px; display: inline-block; border: 1px dashed #F40009; }
+    
+    .btn-redeem { background: #F40009; color: white; border: none; border-radius: 12px; font-weight: bold; }
+    .btn-redeem:disabled { background: #6c757d; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid px-4 py-3">
+    <div class="d-flex align-items-center mb-4">
+      <a href="index.html" class="text-dark me-3">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+        </svg>
+      </a>
+      <h5 class="fw-bold mb-0">Rewards</h5>
+    </div>
+
+    <!-- BALANCE -->
+    <div class="d-flex justify-content-between align-items-end mb-4 px-2">
+      <div>
+        <p class="text-muted small mb-0">Available Balance</p>
+        <h3 class="fw-bold mb-0"><span id="pointBalance">0</span> <span class="fs-6 text-muted fw-normal">pts</span></h3>
+      </div>
+      <button class="btn btn-redeem px-4 py-2" id="redeemBtn" onclick="redeemPoints()" disabled>
+        Redeem 100 pts
+      </button>
+    </div>
+
+    <div id="redeemAlert" class="alert alert-success d-none shadow-sm border-0 rounded-4 mb-4">
+      <strong>Success!</strong> Your coupon has been issued.
+    </div>
+
+    <!-- MILESTONES -->
+    <h6 class="fw-bold mb-3 mt-2">Point Milestones</h6>
+    <div class="card milestone-card milestone-locked p-3" id="ms20">
+      <h6 class="fw-bold mb-1">20 Points</h6>
+      <p class="small mb-0 opacity-75">Getting Started</p>
+    </div>
+    <div class="card milestone-card milestone-locked p-3" id="ms50">
+      <h6 class="fw-bold mb-1">50 Points</h6>
+      <p class="small mb-0 opacity-75">Halfway There</p>
+    </div>
+    <div class="card milestone-card milestone-locked p-3 mb-4" id="ms100">
+      <h6 class="fw-bold mb-1 text-danger" id="ms100title">100 Points</h6>
+      <p class="small mb-0 opacity-75">Free Product Coupon!</p>
+    </div>
+
+    <!-- MY COUPONS -->
+    <h6 class="fw-bold mb-3">My Coupons</h6>
+    <div id="couponList">
+      <div class="text-center py-4 px-3 text-muted small bg-light rounded-4 border border-dashed">
+        No coupons yet. Reach 100 points to redeem a free product!
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="nav-bottom py-2">
+    <div class="container d-flex justify-content-around">
+      <a href="index.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z"/>
+        </svg>
+        Home
+      </a>
+      <a href="scan.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0v-3Zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5ZM.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5Zm15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5Z"/>
+        </svg>
+        Scan
+      </a>
+      <a href="rewards.html" class="nav-link active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M3 2.5a.5.5 0 0 1 .5-.5L4 2l.5.5a.5.5 0 0 1 0 1L4 4l-.5-.5a.5.5 0 0 1-.5-.5zM5 2a.5.5 0 0 1 .5-.5L6 1l.5.5a.5.5 0 0 1 0 1L6 3l-.5-.5a.5.5 0 0 1-.5-.5zM0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2z"/>
+        </svg>
+        Rewards
+      </a>
+      <a href="history.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0z"/>
+          <path d="M8.5 4.5a.5.5 0 0 0-1 0v3.31l-2.062 1.375a.5.5 0 1 0 .554.832l2.25-1.5a.5.5 0 0 0 .258-.422V4.5z"/>
+        </svg>
+        History
+      </a>
+    </div>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!checkAuth()) throw new Error('unauth');
+    setActivePage();
+
+    let currentPoints = 0;
+
+    async function loadData() {
+      const [uRes, cRes] = await Promise.all([
+        apiFetch('/api/users/me'),
+        apiFetch('/api/users/coupons')
+      ]);
+
+      if (!uRes || !cRes) return;
+      const user = await uRes.json();
+      const coupons = await cRes.json();
+
+      currentPoints = user.totalPoints;
+      document.getElementById('pointBalance').textContent = currentPoints;
+      
+      const btn = document.getElementById('redeemBtn');
+      btn.disabled = currentPoints < 100;
+      btn.textContent = currentPoints < 100 ? `Need ${100 - currentPoints} more` : 'Redeem 100 pts';
+
+      // Update milestones
+      if (currentPoints >= 20) unlock('ms20');
+      if (currentPoints >= 50) unlock('ms50');
+      if (currentPoints >= 100) {
+        unlock('ms100');
+        document.getElementById('ms100title').classList.remove('text-danger');
+      }
+
+      const list = document.getElementById('couponList');
+      if (coupons.length > 0) {
+        list.innerHTML = coupons.map(c => `
+          <div class="coupon-card">
+            <p class="fw-bold mb-1">${c.description}</p>
+            <p class="x-small text-muted mb-2">Issued: ${fmtDate(c.issuedAt)}</p>
+            <div class="coupon-code">${c.code.substring(0,4)}-${c.code.substring(4)}</div>
+            <p class="x-small text-success mt-2 mb-0 d-flex align-items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+                <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+              </svg> Ready to use
+            </p>
+          </div>
+        `).join('');
+      }
+    }
+
+    function unlock(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('milestone-locked');
+      el.classList.add('milestone-unlocked');
+    }
+
+    async function redeemPoints() {
+      if (currentPoints < 100) return;
+      
+      const btn = document.getElementById('redeemBtn');
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+
+      try {
+        const res = await apiFetch('/api/users/redeem', { method: 'POST' });
+        if (res && res.ok) {
+          document.getElementById('redeemAlert').classList.remove('d-none');
+          setTimeout(() => document.getElementById('redeemAlert').classList.add('d-none'), 3000);
+          loadData(); // Reload points and coupons
+        } else {
+          alert('Failed to redeem points.');
+          btn.disabled = false;
+        }
+      } catch (e) {
+        alert('Connection error.');
+        btn.disabled = false;
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

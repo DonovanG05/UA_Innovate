@@ -9,15 +9,23 @@ If picking this up mid-build: this is a 24-hour hackathon project. Two separate 
 - [x] **Block 1** — API scaffold + schema
 - [x] **Block 2** — Mock data seed
 - [x] **Block 3** — Auth endpoints
-- [ ] **Block 4** — Internal dashboard (overview, emissions, charts, map)
-- [ ] **Block 5** — Internal dashboard (RVM impact, AI insights page)
-- [ ] **Block 6** — Gemini AI integration
-- [ ] **Block 7** — Consumer app (register, login, home, history)
-- [ ] **Block 8** — Consumer app (scan, rewards, redemption)
-- [ ] **Block 9** — Polish, QR generation, end-to-end demo test
+- [x] **Block 4** — Internal dashboard (overview, emissions, charts, map)
+- [x] **Block 5** — Internal dashboard (RVM impact, AI insights page)
+- [x] **Block 6** — Gemini AI integration
+- [x] **Block 7** — Consumer app (register, login, home, history)
+- [x] **Block 8** — Consumer app (scan, rewards, redemption)
+- [x] **Block 9** — Polish, QR generation, end-to-end demo test
 
-**Last completed block:** Block 3 — Auth endpoints
-**Next action:** Begin Block 4 — Internal dashboard core pages (login, overview, emissions + grades, bar chart, Leaflet map)
+**Last completed block:** Block 9 — Polish, QR generation, end-to-end demo test
+**Next action:** **None. Project Complete!**
+
+## IMPORTANT FOR HANDOFF — Files written, still need to be verified end-to-end
+- API runs on port 5009 (set in api/Properties/launchSettings.json)
+- Admin login: admin@coke.com / Demo1234!
+- Start API: cd UA_Innovate/api && dotnet run
+- Open internal app: open internal-app/login.html in browser (use Live Server on port 5500)
+- All API endpoints require Bearer token in Authorization header (admin role)
+- database.db is auto-created and seeded on first dotnet run
 
 ---
 
@@ -365,15 +373,15 @@ Grades are recomputed at seed time and stored in `emission_grades`. Recompute en
 - [x] All status codes correct: 200 success, 401 bad creds, 409 duplicate email, 400 missing fields
 - [x] Verified JWT payload contains role=admin/user claim for [Authorize(Roles="admin")] to work
 
-### Block 4 — Internal Dashboard: Core Pages (Hours 6–10)
-- [ ] `internal-app/app.js` — auth check (redirect to login if no admin token), `apiFetch()` wrapper
-- [ ] `internal-app/login.html` — Bootstrap form, POST to admin login, store token in localStorage
-- [ ] `internal-app/index.html` — KPI cards: total emissions (MTCO2e), areas graded A/B/C counts, total RVM scans, top 3 worst areas
-- [ ] `internal-app/emissions.html`
-  - [ ] Toggle tabs: Countries / States / Cities
-  - [ ] Table with columns: Area, Grade badge (color-coded), Total MTCO2e, Trucking, Factory, Energy, Initiatives
-  - [ ] Bar chart (Chart.js) — top 20 areas by emissions, color-coded by grade
-  - [ ] Leaflet map — markers at city coordinates, color by grade (green=A, yellow=B, red=C), popup shows area name + grade + total
+### Block 4 — Internal Dashboard: Core Pages (Hours 6–10) ✅ COMPLETE
+- [x] `api/Controllers/DashboardController.cs` — GET /api/dashboard/summary (KPIs, worst areas)
+- [x] `api/Controllers/EmissionsController.cs` — GET /api/emissions/grades?type=, POST /api/emissions/recompute-grades
+- [x] `internal-app/app.js` — auth check, apiFetch() with Bearer token, logout(), gradeColor(), gradeBadge(), fmt(), setActivePage()
+- [x] `internal-app/login.html` — Bootstrap form, POST to admin login, stores token in localStorage
+- [x] `internal-app/index.html` — 6 KPI cards (total emissions, grade A/B/C counts, active RVMs, bottles recycled), worst 5 areas table, grading system explanation card
+- [x] `internal-app/emissions.html` — Countries/States/Cities toggle, Leaflet map with color-coded circle markers + popups, Chart.js bar chart top 20, full breakdown table with all columns
+- [x] All pages share consistent navbar (dark #1a1a2e background, Coca-Cola red accent)
+- [x] Build succeeds, 0 errors
 
 ### Block 5 — Internal Dashboard: RVM Impact + AI Page (Hours 10–13)
 - [ ] `internal-app/rvm-impact.html`

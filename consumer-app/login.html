@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login — Coca-Cola Rewards</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f2f5; }
+    .login-card { max-width: 420px; margin: 80px auto; }
+    .brand-bar { background: #F40009; height: 6px; border-radius: 8px 8px 0 0; }
+    .coke-btn { background: #F40009; color: white; border: none; font-weight: bold; }
+    .coke-btn:hover { background: #d40008; color: white; }
+    .form-control:focus { border-color: #F40009; box-shadow: 0 0 0 0.25rem rgba(244, 0, 9, 0.25); }
+  </style>
+</head>
+<body>
+  <div class="login-card px-3">
+    <div class="text-center mb-4">
+      <h2 class="fw-bold" style="color:#F40009">Coca-Cola</h2>
+      <p class="text-muted">Sustainability & Loyalty Rewards</p>
+    </div>
+    
+    <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+      <div class="brand-bar"></div>
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Welcome Back</h5>
+        <div id="error" class="alert alert-danger py-2 small d-none"></div>
+        
+        <form id="loginForm">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Email address</label>
+            <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+          </div>
+          <div class="mb-4">
+            <label class="form-label small fw-bold">Password</label>
+            <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="btn coke-btn w-100 py-2 mb-3">Sign In</button>
+        </form>
+        
+        <div class="text-center">
+          <p class="small text-muted mb-0">Don't have an account? <a href="register.html" class="text-decoration-none fw-bold" style="color:#F40009">Register</a></p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="text-center mt-4 text-muted small">
+      &copy; 2026 The Coca-Cola Company
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if (getToken()) {
+        const redir = localStorage.getItem('redirectAfterLogin') || 'index.html';
+        localStorage.removeItem('redirectAfterLogin');
+        window.location.href = redir;
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      const err = document.getElementById('error');
+      
+      err.classList.add('d-none');
+      btn.disabled = true;
+      btn.textContent = 'Signing in...';
+
+      try {
+        const res = await fetch(`${API}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem('userToken', data.token);
+          localStorage.setItem('userName', data.name);
+          localStorage.setItem('userId', data.userId);
+          
+          const redir = localStorage.getItem('redirectAfterLogin') || 'index.html';
+          localStorage.removeItem('redirectAfterLogin');
+          window.location.href = redir;
+        } else {
+          err.textContent = 'Invalid email or password.';
+          err.classList.remove('d-none');
+        }
+      } catch (e) {
+        err.textContent = 'Connection error. Please try again.';
+        err.classList.remove('d-none');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>

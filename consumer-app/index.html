@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home — Coca-Cola Rewards</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; padding-bottom: 80px; }
+    .nav-bottom { background: white; border-top: 1px solid #dee2e6; position: fixed; bottom: 0; width: 100%; z-index: 1000; }
+    .nav-bottom .nav-link { color: #6c757d; font-size: 0.75rem; text-align: center; }
+    .nav-bottom .nav-link.active { color: #F40009; font-weight: bold; }
+    .nav-bottom .nav-link i { display: block; font-size: 1.25rem; margin-bottom: 2px; }
+    
+    .points-card { background: #1a1a2e; color: white; border-radius: 20px; overflow: hidden; position: relative; }
+    .points-card::after { content: ''; position: absolute; right: -20px; top: -20px; width: 100px; height: 100px; background: rgba(244,0,9,0.2); border-radius: 50%; }
+    .points-val { font-size: 3rem; font-weight: 800; line-height: 1; }
+    
+    .action-card { border: none; border-radius: 16px; transition: transform 0.2s; }
+    .action-card:active { transform: scale(0.95); }
+    
+    .btn-coke { background: #F40009; color: white; border: none; border-radius: 12px; font-weight: bold; }
+    .x-small { font-size: 0.7rem; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid px-4 py-3">
+    <!-- HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h5 class="fw-bold mb-0">Hi, <span id="userName">—</span>!</h5>
+        <p class="text-muted small mb-0">Earth's looking better already.</p>
+      </div>
+      <button class="btn btn-light rounded-circle p-2" onclick="logout()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+          <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- POINTS CARD -->
+    <div class="points-card p-4 mb-4 shadow">
+      <div class="row align-items-center">
+        <div class="col-8">
+          <p class="small text-white-50 mb-1">Your Total Balance</p>
+          <div class="points-val mb-1"><span id="totalPoints">0</span></div>
+          <p class="small mb-0">REWARD POINTS</p>
+        </div>
+        <div class="col-4 text-end">
+          <div class="p-2 bg-white bg-opacity-10 rounded-3 d-inline-block">
+            <img src="https://www.coca-cola.com/content/dam/on-premise/us/en/logos/coca-cola-logo.png" height="20" alt="Coke">
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-4">
+        <div class="d-flex justify-content-between small mb-1">
+          <span class="text-white-50">Progress to Next Coupon</span>
+          <span class="fw-bold" id="progressPct">0%</span>
+        </div>
+        <div class="progress bg-white bg-opacity-20" style="height: 8px;">
+          <div id="progressBar" class="progress-bar bg-danger" style="width: 0%"></div>
+        </div>
+        <p class="x-small text-white-50 mt-2 mb-0">100 points = 1 Free Product Coupon</p>
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <h6 class="fw-bold mb-3">Quick Actions</h6>
+    <div class="row g-3 mb-4">
+      <div class="col-6">
+        <a href="scan.html" class="text-decoration-none">
+          <div class="card action-card h-100 p-3 shadow-sm bg-white text-center">
+            <div class="mb-2 mx-auto bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#F40009" viewBox="0 0 16 16">
+                <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0v-3Zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5ZM.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5Zm15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5ZM4 4h1v1H4V4Z"/>
+                <path d="M7 2H2v5h5V2ZM3 3h3v3H3V3Zm9 0h-2v2h2V3Z"/>
+                <path d="M14 12h-3v3h3v-3Zm-1 1h1v1h-1v-1Zm-3-2h-1v2h.75v.75H9v1h2v-1h-.75v-.75h.75v-2Z"/>
+                <path d="M14 8.25h-1v1h1v-1Zm-7 5.25H6v-8h1v8Z"/>
+              </svg>
+            </div>
+            <span class="small fw-bold text-dark">Scan Bottle</span>
+          </div>
+        </a>
+      </div>
+      <div class="col-6">
+        <a href="rewards.html" class="text-decoration-none">
+          <div class="card action-card h-100 p-3 shadow-sm bg-white text-center">
+            <div class="mb-2 mx-auto bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#0d6efd" viewBox="0 0 16 16">
+                <path d="M5.5 9.511c.076.954.83 1.697 2.182 1.721 1.178.025 2.037-.481 2.037-1.474 0-.832-.545-1.193-1.456-1.509l-.43-.152c-.718-.244-.996-.462-.996-.83 0-.319.273-.547.746-.547.43 0 .794.18 1.106.445l.62-.755c-.397-.334-.97-.548-1.548-.548-1.332 0-2.119.683-2.119 1.569 0 .926.556 1.191 1.424 1.466l.456.147c.756.233 1.019.507 1.019.893 0 .442-.403.75-1.136.75-.61 0-1.046-.325-1.324-.64l-.651.696Z"/>
+                <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4Zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2Z"/>
+              </svg>
+            </div>
+            <span class="small fw-bold text-dark">Rewards</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- RECENT ACTIVITY -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 class="fw-bold mb-0">Recent Activity</h6>
+      <a href="history.html" class="text-decoration-none x-small fw-bold text-danger">View All</a>
+    </div>
+    
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+      <div id="activityList" class="list-group list-group-flush">
+        <div class="list-group-item py-4 text-center text-muted small">
+          No activity yet. Scan a bottle to get started!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="nav-bottom py-2">
+    <div class="container d-flex justify-content-around">
+      <a href="index.html" class="nav-link active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z"/>
+        </svg>
+        Home
+      </a>
+      <a href="scan.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0v-3Zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5ZM.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5Zm15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5Z"/>
+        </svg>
+        Scan
+      </a>
+      <a href="rewards.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M3 2.5a.5.5 0 0 1 .5-.5L4 2l.5.5a.5.5 0 0 1 0 1L4 4l-.5-.5a.5.5 0 0 1-.5-.5zM5 2a.5.5 0 0 1 .5-.5L6 1l.5.5a.5.5 0 0 1 0 1L6 3l-.5-.5a.5.5 0 0 1-.5-.5zM0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2z"/>
+        </svg>
+        Rewards
+      </a>
+      <a href="history.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0z"/>
+          <path d="M8.5 4.5a.5.5 0 0 0-1 0v3.31l-2.062 1.375a.5.5 0 1 0 .554.832l2.25-1.5a.5.5 0 0 0 .258-.422V4.5z"/>
+        </svg>
+        History
+      </a>
+    </div>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!checkAuth()) throw new Error('unauth');
+    setActivePage();
+
+    async function loadData() {
+      const [uRes, hRes] = await Promise.all([
+        apiFetch('/api/users/me'),
+        apiFetch('/api/users/history')
+      ]);
+
+      if (!uRes || !hRes) return;
+      const user = await uRes.json();
+      const history = await hRes.json();
+
+      document.getElementById('userName').textContent = user.name;
+      document.getElementById('totalPoints').textContent = user.totalPoints;
+      
+      const progress = Math.min(100, (user.totalPoints % 100));
+      document.getElementById('progressBar').style.width = progress + '%';
+      document.getElementById('progressPct').textContent = progress + '%';
+
+      const list = document.getElementById('activityList');
+      if (history.length > 0) {
+        list.innerHTML = history.slice(0, 3).map(h => `
+          <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <div>
+              <p class="small fw-bold mb-0 text-dark">${h.description}</p>
+              <p class="x-small text-muted mb-0">${fmtDate(h.createdAt)}</p>
+            </div>
+            <span class="badge ${h.type === 'earn' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'} rounded-pill">
+              ${h.type === 'earn' ? '+' : '-'}${h.points}
+            </span>
+          </div>
+        `).join('');
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

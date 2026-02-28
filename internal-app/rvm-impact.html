@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RVM Impact — Coca-Cola Sustainability</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f2f5; }
+    .navbar-brand span { color: #F40009; }
+    .kpi-card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .impact-value { font-size: 1.5rem; font-weight: 700; color: #198754; }
+    #qrcode img { margin: 0 auto; border: 8px solid white; border-radius: 8px; }
+    .x-small { font-size: 0.7rem; }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg navbar-dark" style="background:#1a1a2e">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="index.html"><span>●</span> Coca-Cola Sustainability</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="nav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="emissions.html">Emissions</a></li>
+          <li class="nav-item"><a class="nav-link" href="rvm-impact.html">RVM Impact</a></li>
+          <li class="nav-item"><a class="nav-link" href="ai-insights.html">AI Insights</a></li>
+        </ul>
+        <span class="navbar-text me-3 text-white-50 small" id="adminName"></span>
+        <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-4 px-4">
+    <div class="mb-4">
+      <h4 class="fw-bold mb-0">RVM Impact Projection</h4>
+      <p class="text-muted small">Simulate the carbon reduction impact of Reverse Vending Machine deployments.</p>
+    </div>
+
+    <div class="row g-4">
+      <!-- SELECTOR & SLIDER -->
+      <div class="col-lg-4">
+        <div class="card kpi-card p-4 h-100">
+          <label class="form-label fw-semibold">1. Select Target Area</label>
+          <select class="form-select mb-4" id="areaSelect" onchange="updateImpact()">
+            <option value="">Choose an area...</option>
+          </select>
+
+          <label class="form-label fw-semibold d-flex justify-content-between">
+            2. Add New RVMs
+            <span class="badge bg-primary" id="rvmVal">0</span>
+          </label>
+          <input type="range" class="form-range mb-4" id="rvmSlider" min="0" max="500" value="0" step="10" oninput="updateImpact()">
+
+          <div class="alert alert-info py-2 small mb-0">
+            <strong>Formula:</strong> Each RVM is estimated to reduce <strong>200 MTCO₂e</strong> annually through improved recycling rates and reduced landfill waste.
+          </div>
+        </div>
+      </div>
+
+      <!-- PROJECTION RESULTS -->
+      <div class="col-lg-8">
+        <div class="card kpi-card h-100 overflow-hidden">
+          <div class="card-header bg-white py-3 fw-semibold border-bottom">
+            Projection Results
+          </div>
+          <div class="card-body">
+            <div class="row text-center">
+              <div class="col-md-4 mb-3 mb-md-0 border-end">
+                <p class="text-muted small mb-1">Current Emissions</p>
+                <div class="fs-4 fw-bold" id="currentEmissions">—</div>
+                <p class="small text-muted mb-0">MTCO₂e</p>
+              </div>
+              <div class="col-md-4 mb-3 mb-md-0 border-end">
+                <p class="text-muted small mb-1">Estimated Reduction</p>
+                <div class="fs-4 fw-bold text-success" id="projectedReduction">—</div>
+                <p class="small text-muted mb-0">MTCO₂e</p>
+              </div>
+              <div class="col-md-4">
+                <p class="text-muted small mb-1">Projected Emissions</p>
+                <div class="fs-4 fw-bold" id="projectedEmissions">—</div>
+                <p class="small text-muted mb-0" id="percentReduction">—</p>
+              </div>
+            </div>
+            
+            <hr class="my-4">
+
+            <div class="row align-items-center">
+              <div class="col-md-7">
+                <h6>Impact Summary</h6>
+                <p class="small text-muted" id="impactSummary">Select an area and adjust the slider to see projections.</p>
+                <div class="progress" style="height: 10px;">
+                  <div id="impactProgress" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+                </div>
+              </div>
+              <div class="col-md-5 text-center mt-3 mt-md-0">
+                <div class="p-3 border rounded bg-light">
+                  <span class="d-block small text-muted mb-1">Grade Improvement</span>
+                  <div class="h5 fw-bold mb-0 text-success" id="gradeOutlook">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXISTING RVMS TABLE -->
+      <div class="col-lg-8">
+        <div class="card kpi-card">
+          <div class="card-header bg-white py-3 fw-semibold border-bottom d-flex justify-content-between align-items-center">
+            Existing RVMs in Area
+            <span class="badge bg-secondary" id="rvmCountBadge">0</span>
+          </div>
+          <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+              <thead class="table-light small text-uppercase">
+                <tr>
+                  <th>Location Name</th>
+                  <th class="text-center">Active Scans</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-end pe-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="rvmTable">
+                <tr><td colspan="4" class="text-center py-4 text-muted">Select an area to view machines</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- DEMO QR GENERATOR -->
+      <div class="col-lg-4">
+        <div class="card kpi-card h-100 text-center p-4">
+          <h6 class="fw-bold">Demo QR Generator</h6>
+          <p class="small text-muted mb-4">Click "Generate QR" on any machine to create a scan link for the consumer app.</p>
+          <div id="qrcode" class="mb-3 d-flex justify-content-center">
+            <div class="p-4 border border-dashed rounded text-muted small bg-light" style="width:160px; height:160px; display:flex; align-items:center;">
+              Select a machine to generate QR
+            </div>
+          </div>
+          <div id="qrMachineName" class="fw-semibold small"></div>
+          <div id="qrLink" class="text-primary x-small text-truncate mt-1" style="font-size:10px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!checkAuth()) throw new Error('unauth');
+    document.getElementById('adminName').textContent = localStorage.getItem('adminName') || '';
+    setActivePage();
+
+    const areaSelect = document.getElementById('areaSelect');
+    const rvmSlider = document.getElementById('rvmSlider');
+    const rvmVal = document.getElementById('rvmVal');
+    const qrDiv = document.getElementById('qrcode');
+    let qrCode = null;
+
+    async function loadAreas() {
+      const res = await apiFetch('/api/areas?type=city');
+      const areas = await res.json();
+      areas.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.name;
+        areaSelect.appendChild(opt);
+      });
+    }
+
+    async function updateImpact() {
+      const areaId = areaSelect.value;
+      const rvmCount = parseInt(rvmSlider.value);
+      rvmVal.textContent = rvmCount;
+
+      if (!areaId) return;
+
+      const res = await apiFetch(`/api/rvm/impact?areaId=${areaId}&rvmCount=${rvmCount}`);
+      const data = await res.json();
+
+      document.getElementById('currentEmissions').textContent = fmt(data.currentEmissions);
+      document.getElementById('projectedReduction').textContent = '-' + fmt(data.projectedReduction);
+      document.getElementById('projectedEmissions').textContent = fmt(data.projectedEmissions);
+      document.getElementById('percentReduction').textContent = data.percentReduction + '% reduction';
+      
+      document.getElementById('impactProgress').style.width = Math.min(100, data.percentReduction * 2) + '%';
+      document.getElementById('impactSummary').textContent = `Deploying ${rvmCount} new RVMs will reduce ${data.areaId === '0' ? 'global' : 'local'} emissions by ${data.percentReduction}%.`;
+      
+      const outlook = data.percentReduction > 15 ? 'Significant (A)' : data.percentReduction > 5 ? 'Positive (B)' : 'Minimal (C)';
+      document.getElementById('gradeOutlook').textContent = outlook;
+
+      // Also load existing RVMS if area changed
+      if (areaSelect.dataset.lastArea !== areaId) {
+        loadRvms(areaId);
+        areaSelect.dataset.lastArea = areaId;
+      }
+    }
+
+    async function loadRvms(areaId) {
+      const res = await apiFetch(`/api/rvm?areaId=${areaId}`);
+      const rvms = await res.json();
+      
+      document.getElementById('rvmCountBadge').textContent = rvms.length;
+      const tbody = document.getElementById('rvmTable');
+      
+      if (rvms.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No RVMs found in this area.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rvms.map(r => `
+        <tr>
+          <td class="fw-semibold small">${r.locationName}</td>
+          <td class="text-center">${r.scanCount}</td>
+          <td class="text-center">
+            <span class="badge bg-success-subtle text-success border border-success-subtle">Active</span>
+          </td>
+          <td class="text-end pe-4">
+            <button class="btn btn-outline-danger btn-sm" onclick="generateQR(${r.id}, '${r.locationName}')">Generate QR</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function generateQR(rvmId, name) {
+      qrDiv.innerHTML = '';
+      const consumerUrl = `http://localhost:5501/consumer-app/scan.html?rvm_id=${rvmId}&barcode=COKE-355ML`;
+      
+      qrCode = new QRCode(qrDiv, {
+        text: consumerUrl,
+        width: 160,
+        height: 160,
+        colorDark: "#1a1a2e",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      document.getElementById('qrMachineName').textContent = name;
+      document.getElementById('qrLink').textContent = consumerUrl;
+    }
+
+    loadAreas();
+  </script>
+</body>
+</html>
