@@ -7,7 +7,7 @@ This project is a 24-hour hackathon submission featuring a shared ASP.NET Core A
 ## Tech Stack
 - **Backend:** ASP.NET Core Web API (.NET 8), C#
 - **Database:** SQLite (Raw SQL, No ORMs)
-- **AI:** Google Gemini 1.5 Flash (via free API key)
+- **AI:** Google Gemini 2.5 Flash (via free API key)
 - **Frontend:** Vanilla HTML, CSS, JavaScript (ES6+), Bootstrap 5.3 via CDN, Chart.js, Leaflet.js, QRCode.js
 
 ## Project Structure
@@ -20,10 +20,13 @@ This project is a 24-hour hackathon submission featuring a shared ASP.NET Core A
 ## Run Instructions
 
 ### 1. Configure the API
-By default, the backend needs a Gemini API Key to function correctly for AI insights. 
-1. Open `api/appsettings.json`.
-2. Locate the `"GeminiApiKey"` field and replace `"YOUR_GEMINI_API_KEY_HERE"` with your actual Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-*(Note: If left unconfigured, the app will still run and fall back to mock AI responses).*
+The backend requires a Gemini API key for AI insights.
+1. Create the file `api/env/.env` (this file is gitignored — never commit it).
+2. Add your key from [Google AI Studio](https://aistudio.google.com/app/apikey):
+   ```
+   GEMINI_API_KEY=your_key_here
+   ```
+*(If left unconfigured, the app still runs but AI responses will be disabled.)*
 
 ### 2. Start the Backend API
 1. Open a terminal and navigate to the API directory:
@@ -41,9 +44,13 @@ You can serve the frontends using any standard HTTP server (like VS Code's "Live
 
 **Internal App:**
 - Serve the `internal-app` directory on `http://localhost:5500`.
-- Log in with:
-  - **Email:** `admin@coke.com`
-  - **Password:** `Demo1234!`
+- Three demo accounts are pre-seeded with different access levels:
+
+| Role | Email | Password | Access |
+|------|-------|----------|--------|
+| **Admin** | `admin@coke.com` | `Demo1234!` | Everything |
+| **Marketing** | `marketing@coke.com` | `Marketing2026!` | Dashboard, Bottle Data, Users |
+| **Sustainability** | `sustain@coke.com` | `Sustain2026!` | Dashboard, Emissions, RVM Impact, Bottle Data |
 
 **Consumer App:**
 - Serve the `consumer-app` directory on `http://localhost:5501`.
@@ -52,10 +59,18 @@ You can serve the frontends using any standard HTTP server (like VS Code's "Live
 ---
 
 ## Demo Flow
-1. **Admin Dashboard:** Log in as admin, explore the KPI dashboard, and view the interactive map of high-emission areas.
-2. **RVM Impact:** Go to the "RVM Impact" tab, select a target city, and use the slider to simulate the emissions reduction from deploying new machines.
-3. **Generate QR:** In the "RVM Impact" tab, find an existing RVM machine in the list and click "Generate QR".
-4. **Consumer Scan:** In the Consumer App, register a new account.
-5. **Earn Points:** To simulate scanning the physical RVM, click the generated QR code link (or scan it with a mobile device connected to the same local network). This will open the Consumer App's scan page and automatically award you 2 points!
-6. **Redeem:** Go to the "Rewards" tab. Once you reach 100 points, click the button to generate a discount coupon code.
-7. **AI Insights:** Head back to the admin dashboard and view the "AI Insights" tab to see pre-generated recommendations based on the region's grade, or ask Gemini custom questions about a specific area's carbon footprint.
+
+### Role-Based Access
+1. Log in as **Marketing** (`marketing@coke.com` / `Marketing2026!`) — notice only Dashboard, Bottle Data, and Users are visible in the nav.
+2. Log in as **Sustainability** (`sustain@coke.com` / `Sustain2026!`) — see emissions and RVM impact data but not user PII.
+3. Log in as **Admin** (`admin@coke.com` / `Demo1234!`) for full access including CSV exports.
+
+### Core Features
+1. **Dashboard:** KPI overview, interactive emissions map, and Live AI Consultant — ask Gemini questions about any area's carbon footprint.
+2. **Emissions:** Explore emissions by country, state, or city. Filter and sort by grade, category, or total MTCO₂e.
+3. **RVM Impact:** Select a city, adjust the slider to simulate new RVM deployments, and see projected emissions reduction and ROI.
+4. **Generate QR:** In the "RVM Impact" tab, click "Generate QR" on any machine to get a consumer scan link.
+5. **Consumer Scan:** Open the Consumer App, register an account, then scan the QR (or open the link) to earn points.
+6. **Redeem:** Once you reach 100 points in the Consumer App, redeem them for a coupon code.
+7. **Bottle Data:** View aggregated recycling stats — total scans, material breakdown, top brands, and top RVM locations.
+8. **Users:** Browse loyalty program members with masked PII, sort by points or tier, and export to CSV (admin only).
