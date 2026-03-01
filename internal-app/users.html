@@ -13,6 +13,12 @@
     .tier-gold { color: #e6a817; font-weight: 700; }
     .tier-silver { color: #6c757d; font-weight: 700; }
     .tier-bronze { color: #c17f24; font-weight: 700; }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { background: #e9ecef !important; }
+    th .sort-icon { margin-left: 6px; font-size: 1.15em; line-height: 1; }
+    th.sortable .sort-icon::after { content: ' ↕'; opacity: 1; }
+    th.sorted-asc .sort-icon::after { content: ' ▲'; opacity: 1; }
+    th.sorted-desc .sort-icon::after { content: ' ▼'; opacity: 1; }
   </style>
 </head>
 <body>
@@ -75,15 +81,15 @@
           <table class="table table-hover table-sm mb-0">
             <thead class="table-light small text-uppercase">
               <tr>
-                <th>ID</th>
-                <th>Email</th>
-                <th>Name</th>
-                <th class="text-center">Age</th>
-                <th>Zip</th>
-                <th class="text-end">Points</th>
-                <th class="text-end">Scans</th>
-                <th>Fav. RVM Location</th>
-                <th class="text-center">Tier</th>
+                <th class="sortable" data-sort="id" onclick="sortBy('id')">ID <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="email" onclick="sortBy('email')">Email <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="name" onclick="sortBy('name')">Name <span class="sort-icon"></span></th>
+                <th class="sortable text-center" data-sort="age" onclick="sortBy('age')">Age <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="zip" onclick="sortBy('zip')">Zip <span class="sort-icon"></span></th>
+                <th class="sortable text-end" data-sort="points" onclick="sortBy('points')">Points <span class="sort-icon"></span></th>
+                <th class="sortable text-end" data-sort="scans" onclick="sortBy('scans')">Scans <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="favRvm" onclick="sortBy('favRvm')">Fav. RVM Location <span class="sort-icon"></span></th>
+                <th class="sortable text-center" data-sort="tier" onclick="sortBy('tier')">Tier <span class="sort-icon"></span></th>
               </tr>
             </thead>
             <tbody id="usersTable">
@@ -105,28 +111,50 @@
     document.getElementById('adminName').textContent = localStorage.getItem('adminName') || '';
     setActivePage();
 
-    async function loadUsers() {
-      const sortBy = document.getElementById('sortBy').value;
-      const zipFilter = document.getElementById('zipFilter').value;
+    let usersData = [];
+    let sortCol = null;
+    let sortDir = 1; // 1 = asc, -1 = desc
 
-      let url = '/api/users';
-      const params = new URLSearchParams();
-      if (sortBy) params.set('sortBy', sortBy);
-      if (zipFilter) params.set('zipFilter', zipFilter);
-      if (params.toString()) url += '?' + params.toString();
+    const TIER_ORDER = { platinum: 4, gold: 3, silver: 2, bronze: 1 };
 
-      const res = await apiFetch(url);
-      if (!res) return;
-      const users = await res.json();
+    function getSortKey(u, key) {
+      switch (key) {
+        case 'id': return u.id;
+        case 'email': return (u.maskedEmail || '').toLowerCase();
+        case 'name': return (u.firstName || '').toLowerCase();
+        case 'age': return u.age != null ? Number(u.age) : -1;
+        case 'zip': return (u.maskedZip || '').toLowerCase();
+        case 'points': return u.totalPoints ?? 0;
+        case 'scans': return u.scanCount ?? 0;
+        case 'favRvm': return (u.favoriteRvmLocation || '').toLowerCase();
+        case 'tier': return TIER_ORDER[u.tier?.toLowerCase()] ?? 0;
+        default: return '';
+      }
+    }
 
-      document.getElementById('userCount').textContent = users.length + ' users';
+    function sortBy(key) {
+      if (sortCol === key) sortDir *= -1;
+      else { sortCol = key; sortDir = 1; }
+      document.querySelectorAll('thead th.sortable').forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+        if (th.dataset.sort === key) th.classList.add(sortDir === 1 ? 'sorted-asc' : 'sorted-desc');
+      });
+      const sorted = [...usersData].sort((a, b) => {
+        const va = getSortKey(a, key);
+        const vb = getSortKey(b, key);
+        if (va < vb) return -1 * sortDir;
+        if (va > vb) return 1 * sortDir;
+        return 0;
+      });
+      renderUsers(sorted);
+    }
 
+    function renderUsers(users) {
       const tbody = document.getElementById('usersTable');
-      if (users.length === 0) {
+      if (!users || users.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No users found.</td></tr>';
         return;
       }
-
       tbody.innerHTML = users.map(u => `
         <tr>
           <td class="text-muted small">${u.id}</td>
@@ -140,6 +168,38 @@
           <td class="text-center"><span class="tier-${u.tier.toLowerCase()}">${u.tier}</span></td>
         </tr>
       `).join('');
+    }
+
+    async function loadUsers() {
+      const sortByVal = document.getElementById('sortBy').value;
+      const zipFilter = document.getElementById('zipFilter').value;
+
+      let url = '/api/users';
+      const params = new URLSearchParams();
+      if (sortByVal) params.set('sortBy', sortByVal);
+      if (zipFilter) params.set('zipFilter', zipFilter);
+      if (params.toString()) url += '?' + params.toString();
+
+      const res = await apiFetch(url);
+      if (!res) return;
+      const users = await res.json();
+
+      usersData = users;
+      document.getElementById('userCount').textContent = users.length + ' users';
+
+      // Apply current header sort if any, else just render
+      if (sortCol) {
+        const sorted = [...usersData].sort((a, b) => {
+          const va = getSortKey(a, sortCol);
+          const vb = getSortKey(b, sortCol);
+          if (va < vb) return -1 * sortDir;
+          if (va > vb) return 1 * sortDir;
+          return 0;
+        });
+        renderUsers(sorted);
+      } else {
+        renderUsers(users);
+      }
     }
 
     async function exportUsers() {

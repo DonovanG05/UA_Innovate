@@ -86,13 +86,11 @@
                 <th>#</th>
                 <th>Area</th>
                 <th>Grade</th>
-                <th>Total MTCO₂e</th>
                 <th>Trucking</th>
                 <th>Factory</th>
+                <th>Total</th>
                 <th>Energy</th>
                 <th>RVMs</th>
-                <th>EV Fleet %</th>
-                <th>Renewable %</th>
                 <th>Final Score</th>
               </tr>
             </thead>
@@ -152,9 +150,10 @@
         }).bindPopup(`
           <strong>${a.name}</strong><br>
           Grade: <strong>${a.grade}</strong><br>
-          Total: ${fmt(a.rawScore)} MTCO₂e<br>
+          Trucking: ${fmt(a.trucking)} | Factory: ${fmt(a.factory)} MTCO₂e<br>
+          <strong>Total: ${fmt((a.trucking || 0) + (a.factory || 0))} MTCO₂e</strong><br>
           Final Score: ${fmt(a.finalScore)}<br>
-          RVMs: ${a.rvmCount} | EV: ${a.evPct}% | Renewable: ${a.renewablePct}%
+          RVMs: ${a.rvmCount}
         `).addTo(map);
         markers.push(m);
       });
@@ -189,21 +188,21 @@
 
       // Table
       const tbody = document.getElementById('tableBody');
-      tbody.innerHTML = data.map((a, i) => `
+      tbody.innerHTML = data.map((a, i) => {
+        const total = (a.trucking || 0) + (a.factory || 0);
+        return `
         <tr>
           <td class="text-muted">${i + 1}</td>
           <td class="fw-semibold">${a.name}</td>
           <td>${gradeBadge(a.grade)}</td>
-          <td>${fmt(a.rawScore)}</td>
           <td>${fmt(a.trucking)}</td>
           <td>${fmt(a.factory)}</td>
+          <td><strong>${fmt(total)}</strong></td>
           <td>${fmt(a.energy)}</td>
           <td>${a.rvmCount}</td>
-          <td>${a.evPct}%</td>
-          <td>${a.renewablePct}%</td>
           <td>${fmt(a.finalScore)}</td>
         </tr>
-      `).join('');
+      `}).join('');
     }
 
     async function exportCsv() {
