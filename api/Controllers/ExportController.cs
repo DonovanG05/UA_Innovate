@@ -25,7 +25,7 @@ public class ExportController : ControllerBase
 
         var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            SELECT u.id, u.email, u.name, u.age, u.zip_code, u.total_points,
+            SELECT u.id, u.email, u.name, u.age, u.zip_code, u.gender, u.total_points,
                    COUNT(s.id) as scan_count, u.created_at
             FROM users u
             LEFT JOIN rvm_scans s ON s.user_id = u.id
@@ -34,7 +34,7 @@ public class ExportController : ControllerBase
         """;
 
         var sb = new StringBuilder();
-        sb.AppendLine("id,email,name,age,zip_code,total_points,scan_count,created_at");
+        sb.AppendLine("id,email,name,age,zip_code,gender,total_points,scan_count,created_at");
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -44,10 +44,11 @@ public class ExportController : ControllerBase
             var name = CsvEscape(reader.GetString(2));
             var age = reader.IsDBNull(3) ? "" : reader.GetInt32(3).ToString();
             var zip = reader.IsDBNull(4) ? "" : CsvEscape(reader.GetString(4));
-            var points = reader.GetInt32(5);
-            var scans = reader.GetInt32(6);
-            var created = reader.GetString(7);
-            sb.AppendLine($"{id},{email},{name},{age},{zip},{points},{scans},{created}");
+            var gender = reader.IsDBNull(5) ? "" : CsvEscape(reader.GetString(5));
+            var points = reader.GetInt32(6);
+            var scans = reader.GetInt32(7);
+            var created = reader.GetString(8);
+            sb.AppendLine($"{id},{email},{name},{age},{zip},{gender},{points},{scans},{created}");
         }
 
         return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", "users.csv");

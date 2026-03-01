@@ -22,7 +22,7 @@ public class AuthController : ControllerBase
     }
 
     public record LoginRequest(string Email, string Password);
-    public record RegisterRequest(string Email, string Password, string Name, int? Age = null, string? ZipCode = null);
+    public record RegisterRequest(string Email, string Password, string Name, int? Age = null, string? ZipCode = null, string? Gender = null);
     public record AuthResponse(string Token, string Role, string Name, int UserId);
 
     // POST /api/auth/admin/login
@@ -66,10 +66,11 @@ public class AuthController : ControllerBase
             return Conflict(new { error = "Email already registered" });
 
         var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+        var qrId = Guid.NewGuid().ToString("N");
         var insertCmd = conn.CreateCommand();
         insertCmd.CommandText = """
-            INSERT INTO users (email, password_hash, name, created_at, total_points, age, zip_code)
-            VALUES ($email, $hash, $name, $now, 0, $age, $zip)
+            INSERT INTO users (email, password_hash, name, created_at, total_points, age, zip_code, gender, qr_identifier)
+            VALUES ($email, $hash, $name, $now, 0, $age, $zip, $gender, $qrId)
         """;
         insertCmd.Parameters.AddWithValue("$email", req.Email.Trim().ToLower());
         insertCmd.Parameters.AddWithValue("$hash", HashPasswordPbkdf2(req.Password));
@@ -77,6 +78,8 @@ public class AuthController : ControllerBase
         insertCmd.Parameters.AddWithValue("$now", now);
         insertCmd.Parameters.AddWithValue("$age", req.Age.HasValue ? (object)req.Age.Value : DBNull.Value);
         insertCmd.Parameters.AddWithValue("$zip", req.ZipCode != null ? (object)req.ZipCode.Trim() : DBNull.Value);
+        insertCmd.Parameters.AddWithValue("$gender", req.Gender != null ? (object)req.Gender.Trim() : DBNull.Value);
+        insertCmd.Parameters.AddWithValue("$qrId", qrId);
         insertCmd.ExecuteNonQuery();
 
         var idCmd = conn.CreateCommand();

@@ -29,7 +29,7 @@ public class UsersController : ControllerBase
 
         var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            SELECT u.id, u.email, u.name, u.age, u.zip_code, u.total_points,
+            SELECT u.id, u.email, u.name, u.age, u.zip_code, u.gender, u.total_points,
                    COUNT(s.id) as scan_count,
                    (SELECT m.location_name FROM rvm_scans s2
                     JOIN rvm_machines m ON s2.rvm_id = m.id
@@ -49,9 +49,10 @@ public class UsersController : ControllerBase
             var name = reader.GetString(2);
             var age = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3);
             var zip = reader.IsDBNull(4) ? null : reader.GetString(4);
-            var points = reader.GetInt32(5);
-            var scans = reader.GetInt32(6);
-            var favLoc = reader.IsDBNull(7) ? "N/A" : reader.GetString(7);
+            var gender = reader.IsDBNull(5) ? null : reader.GetString(5);
+            var points = reader.GetInt32(6);
+            var scans = reader.GetInt32(7);
+            var favLoc = reader.IsDBNull(8) ? "N/A" : reader.GetString(8);
 
             // Mask email: j***@example.com
             var atIdx = email.IndexOf('@');
@@ -75,6 +76,7 @@ public class UsersController : ControllerBase
                 firstName,
                 age,
                 maskedZip,
+                gender,
                 totalPoints = points,
                 scanCount = scans,
                 favoriteRvmLocation = favLoc,
@@ -106,21 +108,42 @@ public class UsersController : ControllerBase
         conn.Open();
 
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT id, email, name, total_points, created_at, address FROM users WHERE id = $userId";
+        cmd.CommandText = "SELECT id, email, name, total_points, created_at, address, qr_identifier, gender FROM users WHERE id = $userId";
         cmd.Parameters.AddWithValue("$userId", userId);
 
         using var reader = cmd.ExecuteReader();
         if (!reader.Read()) return NotFound(new { message = "User not found" });
 
+        var id = reader.GetInt32(0);
+        var email = reader.GetString(1);
+        var name = reader.GetString(2);
+        var totalPoints = reader.GetInt32(3);
+        var createdAt = reader.GetString(4);
         var address = reader.FieldCount > 5 && !reader.IsDBNull(5) ? reader.GetString(5) : null;
+        var qrIdentifier = reader.FieldCount > 6 && !reader.IsDBNull(6) ? reader.GetString(6) : null;
+        var gender = reader.FieldCount > 7 && !reader.IsDBNull(7) ? reader.GetString(7) : null;
+        reader.Close();
+
+        if (string.IsNullOrEmpty(qrIdentifier))
+        {
+            qrIdentifier = Guid.NewGuid().ToString("N");
+            var updateCmd = conn.CreateCommand();
+            updateCmd.CommandText = "UPDATE users SET qr_identifier = $qrId WHERE id = $userId";
+            updateCmd.Parameters.AddWithValue("$qrId", qrIdentifier);
+            updateCmd.Parameters.AddWithValue("$userId", userId);
+            updateCmd.ExecuteNonQuery();
+        }
+
         return Ok(new
         {
-            id = reader.GetInt32(0),
-            email = reader.GetString(1),
-            name = reader.GetString(2),
-            totalPoints = reader.GetInt32(3),
-            createdAt = reader.GetString(4),
-            address
+            id,
+            email,
+            name,
+            totalPoints,
+            createdAt,
+            address,
+            qrIdentifier,
+            gender
         });
     }
 
@@ -132,17 +155,20 @@ public class UsersController : ControllerBase
         using var conn = _db.Connect();
         conn.Open();
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "UPDATE users SET address = $address WHERE id = $userId";
+        cmd.CommandText = "UPDATE users SET address = $address, gender = $gender WHERE id = $userId";
         cmd.Parameters.AddWithValue("$address", (object?)request.Address ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$gender", (object?)request.Gender ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$userId", userId);
         cmd.ExecuteNonQuery();
-        return Ok(new { message = "Address saved.", address = request.Address });
+        return Ok(new { message = "Profile saved.", address = request.Address, gender = request.Gender });
     }
 
     public class UpdateMeRequest
     {
         [JsonPropertyName("address")]
         public string? Address { get; set; }
+        [JsonPropertyName("gender")]
+        public string? Gender { get; set; }
     }
 
     [HttpGet("history")]

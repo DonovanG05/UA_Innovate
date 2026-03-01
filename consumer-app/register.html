@@ -41,7 +41,7 @@
             <label class="form-label small fw-bold">Create Password</label>
             <input type="password" id="password" class="form-control" placeholder="••••••••" required>
           </div>
-          <div class="row g-2 mb-4">
+          <div class="row g-2 mb-3">
             <div class="col-6">
               <label class="form-label small fw-bold">Age</label>
               <input type="number" id="age" class="form-control" placeholder="25" min="13" max="120">
@@ -50,6 +50,16 @@
               <label class="form-label small fw-bold">Zip Code</label>
               <input type="text" id="zipCode" class="form-control" placeholder="30301" maxlength="10">
             </div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label small fw-bold">Gender</label>
+            <select id="gender" class="form-select">
+              <option value="">Prefer not to say</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Non-binary">Non-binary</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
           <button type="submit" class="btn coke-btn w-100 py-2 mb-3">Create Account</button>
         </form>
@@ -83,7 +93,8 @@
             email: document.getElementById('email').value,
             password: document.getElementById('password').value,
             age: document.getElementById('age').value ? parseInt(document.getElementById('age').value) : null,
-            zipCode: document.getElementById('zipCode').value || null
+            zipCode: document.getElementById('zipCode').value || null,
+            gender: document.getElementById('gender').value || null
           })
         });
 

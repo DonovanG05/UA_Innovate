@@ -84,6 +84,7 @@
                 <th class="sortable" data-sort="email" onclick="sortBy('email')">Email <span class="sort-icon"></span></th>
                 <th class="sortable" data-sort="name" onclick="sortBy('name')">Name <span class="sort-icon"></span></th>
                 <th class="sortable text-center" data-sort="age" onclick="sortBy('age')">Age <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="gender" onclick="sortBy('gender')">Gender <span class="sort-icon"></span></th>
                 <th class="sortable" data-sort="zip" onclick="sortBy('zip')">Zip <span class="sort-icon"></span></th>
                 <th class="sortable text-end" data-sort="points" onclick="sortBy('points')">Points <span class="sort-icon"></span></th>
                 <th class="sortable text-end" data-sort="scans" onclick="sortBy('scans')">Scans <span class="sort-icon"></span></th>
@@ -92,7 +93,7 @@
               </tr>
             </thead>
             <tbody id="usersTable">
-              <tr><td colspan="9" class="text-center py-4">
+              <tr><td colspan="10" class="text-center py-4">
                 <div class="spinner-border spinner-border-sm text-danger me-2" role="status"></div>
                 Loading users...
               </td></tr>
@@ -122,6 +123,7 @@
         case 'email': return (u.maskedEmail || '').toLowerCase();
         case 'name': return (u.firstName || '').toLowerCase();
         case 'age': return u.age != null ? Number(u.age) : -1;
+        case 'gender': return (u.gender || '').toLowerCase();
         case 'zip': return (u.maskedZip || '').toLowerCase();
         case 'points': return u.totalPoints ?? 0;
         case 'scans': return u.scanCount ?? 0;
@@ -151,7 +153,7 @@
     function renderUsers(users) {
       const tbody = document.getElementById('usersTable');
       if (!users || users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No users found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No users found.</td></tr>';
         return;
       }
       tbody.innerHTML = users.map(u => `
@@ -160,6 +162,7 @@
           <td class="small">${u.maskedEmail}</td>
           <td class="fw-semibold small">${u.firstName}</td>
           <td class="text-center small">${u.age ?? '—'}</td>
+          <td class="small">${u.gender ?? '—'}</td>
           <td class="small">${u.maskedZip ?? '—'}</td>
           <td class="text-end">${u.totalPoints.toLocaleString()}</td>
           <td class="text-end">${u.scanCount}</td>

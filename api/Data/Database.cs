@@ -132,7 +132,10 @@ public class Database
         // Migrations for existing databases (SQLite ignores errors on duplicate columns)
         RunMigration(conn, "ALTER TABLE users ADD COLUMN age INTEGER");
         RunMigration(conn, "ALTER TABLE users ADD COLUMN zip_code TEXT");
+        RunMigration(conn, "ALTER TABLE users ADD COLUMN gender TEXT");
         RunMigration(conn, "ALTER TABLE users ADD COLUMN address TEXT");
+        RunMigration(conn, "ALTER TABLE users ADD COLUMN qr_identifier TEXT");
+        RunMigration(conn, "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_qr_identifier ON users(qr_identifier)");
         RunMigration(conn, "ALTER TABLE rvm_scans ADD COLUMN material_type TEXT");
         RunMigration(conn, "ALTER TABLE rvm_scans ADD COLUMN brand TEXT");
     }

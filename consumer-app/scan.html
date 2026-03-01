@@ -12,22 +12,6 @@
     .nav-bottom { background: #fff; border-top: 2px solid rgba(244,0,9,0.15); position: fixed; bottom: 0; width: 100%; z-index: 1000; }
     .nav-bottom .nav-link { color: #4a4a4a; font-size: 0.75rem; text-align: center; font-weight: 600; }
     .nav-bottom .nav-link.active { color: var(--coke-red); font-weight: 700; }
-    .scan-card { border: none; border-radius: 24px; box-shadow: 0 4px 20px rgba(244,0,9,0.08); min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem;}
-    @keyframes pop {
-      0% { transform: scale(0.8); opacity: 0; }
-      50% { transform: scale(1.1); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .success-icon { animation: pop 0.5s ease-out forwards; width: 80px; height: 80px; background: #d1e7dd; color: #0f5132; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; }
-    .points-badge { background: linear-gradient(135deg, var(--coke-red), #c00); color: white; padding: 0.5rem 1rem; border-radius: 50px; font-weight: bold; font-size: 1.25rem; display: inline-block; margin-top: 1rem; }
-    .scanner-placeholder { width: 200px; height: 200px; border: 4px dashed rgba(244,0,9,0.25); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem auto; position: relative; background: var(--coke-soft); }
-    .scanner-line { position: absolute; width: 100%; height: 4px; background: rgba(244, 0, 9, 0.5); top: 50%; box-shadow: 0 0 10px rgba(244, 0, 9, 0.8); animation: scan 2s infinite linear; }
-    @keyframes scan {
-      0% { top: 10%; opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { top: 90%; opacity: 0; }
-    }
   </style>
 </head>
 <body>
@@ -38,95 +22,13 @@
           <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
         </svg>
       </a>
-      <h5 class="fw-bold mb-0" style="color: #4a4a4a;">Scan Bottle</h5>
+      <h5 class="fw-bold mb-0" style="color: #4a4a4a;">Scan</h5>
     </div>
 
-    <div class="card scan-card shadow-sm bg-white" id="scanContainer">
-      <!-- Loading State -->
-      <div id="loadingState">
-        <div class="spinner-border text-danger mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
-        <h5>Processing Scan...</h5>
-        <p class="text-muted small">Communicating with the RVM.</p>
-      </div>
-
-      <!-- Selection State -->
-      <div id="selectionState" class="d-none w-100">
-        <h5 class="fw-bold mb-1">What are you recycling?</h5>
-        <p class="text-muted small mb-4">Select size, material, and brand to earn points.</p>
-
-        <div class="mb-4">
-          <p class="fw-semibold small mb-2">Size</p>
-          <div class="d-flex gap-2 justify-content-center flex-wrap">
-            <button class="btn btn-outline-secondary rounded-pill px-4" id="btnSize12" onclick="selectSize(12, this)">12oz bottle/can <span class="text-muted">(1 pt)</span></button>
-            <button class="btn btn-outline-secondary rounded-pill px-4" id="btnSize20" onclick="selectSize(20, this)">20oz bottle <span class="text-muted">(2 pts)</span></button>
-          </div>
-        </div>
-
-        <div class="mb-4">
-          <p class="fw-semibold small mb-2">Material</p>
-          <div class="d-flex gap-2 justify-content-center flex-wrap">
-            <button class="btn btn-outline-secondary rounded-pill px-4" id="btnPlastic" onclick="selectMaterial('plastic', this)">Plastic</button>
-            <button class="btn btn-outline-secondary rounded-pill px-4" id="btnAluminum" onclick="selectMaterial('aluminum', this)">Aluminum</button>
-          </div>
-        </div>
-
-        <div class="mb-4">
-          <p class="fw-semibold small mb-2">Brand</p>
-          <div class="d-flex gap-2 justify-content-center flex-wrap">
-            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="selectBrand('coke', this)">Coke</button>
-            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="selectBrand('diet-coke', this)">Diet Coke</button>
-            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="selectBrand('sprite', this)">Sprite</button>
-            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="selectBrand('fanta', this)">Fanta</button>
-            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="selectBrand('other', this)">Other</button>
-          </div>
-        </div>
-
-        <button id="confirmScanBtn" class="btn w-100 py-2 fw-bold text-white rounded-pill" style="background:#F40009" onclick="confirmScan()" disabled>
-          Confirm & Recycle (+<span id="confirmPts">1</span> pt)
-        </button>
-      </div>
-
-      <!-- Instruction State -->
-      <div id="instructionState" class="d-none w-100">
-        <div class="scanner-placeholder">
-          <div class="scanner-line"></div>
-          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#adb5bd" viewBox="0 0 16 16">
-            <path d="M.5 1a.5.5 0 0 0-.5.5v2a.5.5 0 0 0 1 0v-1.5h1.5a.5.5 0 0 0 0-1H.5Zm15 0a.5.5 0 0 0-.5-.5h-1.5a.5.5 0 0 0 0 1H15v1.5a.5.5 0 0 0 1 0v-2a.5.5 0 0 0-.5-.5ZM.5 15a.5.5 0 0 0 .5.5h1.5a.5.5 0 0 0 0-1H1v-1.5a.5.5 0 0 0-1 0v2Zm15 0a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-1 0v1.5h-1.5a.5.5 0 0 0 0 1H15.5Z"/>
-            <path d="M3 4.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5v-7Zm1 1v5h7v-5H4Z"/>
-          </svg>
-        </div>
-        <h5 class="fw-bold">Ready to Scan</h5>
-        <p class="text-muted small mb-0">Find a Coca-Cola Reverse Vending Machine and scan its QR code to earn points.</p>
-      </div>
-
-      <!-- Success State -->
-      <div id="successState" class="d-none w-100">
-        <div class="success-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
-          </svg>
-        </div>
-        <h4 class="fw-bold">Scan Successful!</h4>
-        <p class="text-muted small">Thank you for recycling and supporting our sustainability goals.</p>
-        <div class="points-badge" id="successPtsBadge">+1 Point</div>
-        <div class="mt-4">
-          <a href="index.html" class="btn btn-outline-dark rounded-pill px-4">Back to Home</a>
-        </div>
-      </div>
-
-      <!-- Error State -->
-      <div id="errorState" class="d-none w-100">
-        <div class="success-icon" style="background:#f8d7da; color:#842029;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-          </svg>
-        </div>
-        <h4 class="fw-bold">Scan Failed</h4>
-        <p class="text-muted small" id="errorMsg">There was an issue processing your scan.</p>
-        <div class="mt-4">
-          <button onclick="window.location.reload()" class="btn btn-outline-dark rounded-pill px-4">Try Again</button>
-        </div>
-      </div>
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white text-center">
+      <h6 class="fw-bold mb-1" style="color: #4a4a4a;">Your QR code</h6>
+      <p class="text-muted x-small mb-3">Hold this up to the machine to identify your account.</p>
+      <div id="userQrCode" class="d-flex justify-content-center" style="min-height: 180px;"></div>
     </div>
   </div>
 
@@ -162,123 +64,23 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="app.js"></script>
   <script>
     if (!checkAuth()) throw new Error('unauth');
     setActivePage();
 
-    const ALL_STATES = ['loadingState', 'selectionState', 'instructionState', 'successState', 'errorState'];
-    let scanRvmId = null, scanBarcode = null, selectedMaterial = null, selectedBrand = null, selectedSizeOz = 12;
-
-    function selectSize(oz, btn) {
-      selectedSizeOz = oz;
-      document.querySelectorAll('#selectionState .btn[onclick^="selectSize"]').forEach(b => {
-        b.classList.remove('btn-danger', 'text-white');
-        b.classList.add('btn-outline-secondary');
-      });
-      btn.classList.remove('btn-outline-secondary');
-      btn.classList.add('btn-danger', 'text-white');
-      const pts = oz === 12 ? 1 : 2;
-      const confirmPts = document.getElementById('confirmPts');
-      if (confirmPts) confirmPts.textContent = pts;
-      updateConfirmBtn();
-    }
-
-    function showState(stateId) {
-      ALL_STATES.forEach(id => document.getElementById(id).classList.add('d-none'));
-      document.getElementById(stateId).classList.remove('d-none');
-    }
-
-    function selectMaterial(val, btn) {
-      selectedMaterial = val;
-      document.querySelectorAll('#selectionState .btn[onclick^="selectMaterial"]').forEach(b => {
-        b.classList.remove('btn-danger', 'text-white');
-        b.classList.add('btn-outline-secondary');
-      });
-      btn.classList.remove('btn-outline-secondary');
-      btn.classList.add('btn-danger', 'text-white');
-      updateConfirmBtn();
-    }
-
-    function selectBrand(val, btn) {
-      selectedBrand = val;
-      document.querySelectorAll('#selectionState .btn[onclick^="selectBrand"]').forEach(b => {
-        b.classList.remove('btn-danger', 'text-white');
-        b.classList.add('btn-outline-secondary');
-      });
-      btn.classList.remove('btn-outline-secondary');
-      btn.classList.add('btn-danger', 'text-white');
-      updateConfirmBtn();
-    }
-
-    function updateConfirmBtn() {
-      const ok = selectedMaterial && selectedBrand && selectedSizeOz;
-      document.getElementById('confirmScanBtn').disabled = !ok;
-      const pts = selectedSizeOz === 20 ? 2 : 1;
-      const confirmPts = document.getElementById('confirmPts');
-      if (confirmPts) confirmPts.textContent = pts;
-    }
-
-    async function confirmScan() {
-      showState('loadingState');
-      const pointsToEarn = selectedSizeOz === 20 ? 2 : 1;
-      try {
-        const res = await apiFetch('/api/rvm/scan', {
-          method: 'POST',
-          body: JSON.stringify({
-            rvmId: parseInt(scanRvmId),
-            barcode: scanBarcode,
-            materialType: selectedMaterial,
-            brand: selectedBrand,
-            sizeOz: selectedSizeOz
-          })
-        });
-
-        if (res && res.ok) {
-          const data = await res.json().catch(() => ({}));
-          const pts = data.points != null ? data.points : pointsToEarn;
-          document.getElementById('successPtsBadge').textContent = '+' + pts + (pts === 1 ? ' Point' : ' Points');
-          showState('successState');
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } else {
-          const data = await res?.json();
-          document.getElementById('errorMsg').textContent = data?.message || 'Failed to record scan.';
-          showState('errorState');
-        }
-      } catch (e) {
-        document.getElementById('errorMsg').textContent = 'Connection error. Please try again.';
-        showState('errorState');
+    (async function loadUserQr() {
+      const res = await apiFetch('/api/users/me');
+      if (!res || !res.ok) return;
+      const user = await res.json();
+      if (user.qrIdentifier && typeof QRCode !== 'undefined') {
+        var qrEl = document.getElementById('userQrCode');
+        if (!qrEl) return;
+        qrEl.innerHTML = '';
+        new QRCode(qrEl, { text: user.qrIdentifier, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
       }
-    }
-
-    async function processScan() {
-      const params = new URLSearchParams(window.location.search);
-      scanRvmId = params.get('rvm_id');
-      scanBarcode = params.get('barcode');
-
-      // Pre-populate from URL params if provided (QR code embedding)
-      const urlMaterial = params.get('material');
-      const urlBrand = params.get('brand');
-      if (urlMaterial) {
-        const btn = document.getElementById('btn' + urlMaterial.charAt(0).toUpperCase() + urlMaterial.slice(1));
-        if (btn) selectMaterial(urlMaterial, btn);
-      }
-      if (urlBrand) {
-        const allBrandBtns = document.querySelectorAll('#selectionState .btn[onclick^="selectBrand"]');
-        allBrandBtns.forEach(b => { if (b.getAttribute('onclick').includes(`'${urlBrand}'`)) selectBrand(urlBrand, b); });
-      }
-
-      if (!scanRvmId) {
-        showState('instructionState');
-        return;
-      }
-
-      showState('selectionState');
-      selectSize(12, document.getElementById('btnSize12'));
-    }
-
-    // Give a slight delay for realism if auto-processing
-    setTimeout(processScan, 800);
+    })();
   </script>
 </body>
 </html>
