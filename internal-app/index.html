@@ -172,7 +172,7 @@
   <script src="app.js"></script>
   <script>
     if (!checkAuth()) throw new Error('unauth');
-    document.getElementById('adminName').textContent = localStorage.getItem('adminName') || '';
+    showNavUser();
     setActivePage();
 
     async function loadAreas() {

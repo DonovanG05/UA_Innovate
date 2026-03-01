@@ -8,7 +8,7 @@ namespace api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "admin")]
+[Authorize(Roles = "admin,marketing,sustainability")]
 public class InsightsController : ControllerBase
 {
     private readonly Database _db;

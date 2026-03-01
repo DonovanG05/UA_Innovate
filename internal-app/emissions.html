@@ -84,7 +84,7 @@
         <span>Detailed Breakdown</span>
         <div class="d-flex align-items-center gap-3">
           <span id="areaCount" class="text-muted small"></span>
-          <button class="btn btn-outline-secondary btn-sm" onclick="exportCsv()">Export Emissions CSV</button>
+          <button class="btn btn-outline-secondary btn-sm" data-admin-only onclick="exportCsv()">Export Emissions CSV</button>
         </div>
       </div>
       <div class="card-body p-0">
@@ -123,6 +123,8 @@
   <script src="app.js"></script>
   <script>
     if (!checkAuth()) throw new Error('unauth');
+    checkPageAccess(['admin', 'sustainability']);
+    showNavUser();
     setActivePage();
 
     let map = L.map('map').setView([39.5, -80], 4);

@@ -21,7 +21,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,marketing")]
     public IActionResult GetAllUsers([FromQuery] string? sortBy, [FromQuery] string? zipFilter)
     {
         using var conn = _db.Connect();

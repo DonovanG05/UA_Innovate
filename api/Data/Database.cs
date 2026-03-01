@@ -138,6 +138,7 @@ public class Database
         RunMigration(conn, "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_qr_identifier ON users(qr_identifier)");
         RunMigration(conn, "ALTER TABLE rvm_scans ADD COLUMN material_type TEXT");
         RunMigration(conn, "ALTER TABLE rvm_scans ADD COLUMN brand TEXT");
+        RunMigration(conn, "ALTER TABLE admin_users ADD COLUMN role TEXT NOT NULL DEFAULT 'admin'");
     }
 
     private static void RunMigration(SqliteConnection conn, string sql)

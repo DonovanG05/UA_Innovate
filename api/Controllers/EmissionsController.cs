@@ -6,7 +6,7 @@ namespace api.Controllers;
 
 [ApiController]
 [Route("api/emissions")]
-[Authorize(Roles = "admin")]
+[Authorize(Roles = "admin,sustainability")]
 public class EmissionsController : ControllerBase
 {
     private readonly Database _db;

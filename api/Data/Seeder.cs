@@ -25,6 +25,7 @@ public static class Seeder
             if ((long)scanCheck.ExecuteScalar()! == 0)
                 InsertMockScans(conn);
             ImportMissingDataForExistingUsers(conn);
+            SeedRoleAccounts(conn);
             return;
         }
 
@@ -261,12 +262,13 @@ public static class Seeder
 
         InsertMockScans(conn);
 
-        // ── ADMIN USER ───────────────────────────────────────────────────────
+        // ── ADMIN USERS ──────────────────────────────────────────────────────
         var adminHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("Demo1234!"))).ToLower();
         var adminCmd = conn.CreateCommand();
-        adminCmd.CommandText = "INSERT INTO admin_users (email, password_hash) VALUES ('admin@coke.com', $hash)";
+        adminCmd.CommandText = "INSERT INTO admin_users (email, password_hash, role) VALUES ('admin@coke.com', $hash, 'admin')";
         adminCmd.Parameters.AddWithValue("$hash", adminHash);
         adminCmd.ExecuteNonQuery();
+        SeedRoleAccounts(conn);
 
         // ── GRADES ───────────────────────────────────────────────────────────
         ComputeGrades(conn);
@@ -634,6 +636,30 @@ public static class Seeder
             cmd.Parameters.AddWithValue("$type", type);
             cmd.Parameters.AddWithValue("$value", value);
             cmd.ExecuteNonQuery();
+        }
+    }
+
+    private static void SeedRoleAccounts(SqliteConnection conn)
+    {
+        var accounts = new (string Email, string Password, string Role)[]
+        {
+            ("marketing@coke.com",  "Marketing2026!",  "marketing"),
+            ("sustain@coke.com",    "Sustain2026!",    "sustainability"),
+        };
+        foreach (var (email, password, role) in accounts)
+        {
+            var existsCmd = conn.CreateCommand();
+            existsCmd.CommandText = "SELECT COUNT(*) FROM admin_users WHERE email = $email";
+            existsCmd.Parameters.AddWithValue("$email", email);
+            if ((long)existsCmd.ExecuteScalar()! > 0) continue;
+
+            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(password))).ToLower();
+            var insertCmd = conn.CreateCommand();
+            insertCmd.CommandText = "INSERT INTO admin_users (email, password_hash, role) VALUES ($email, $hash, $role)";
+            insertCmd.Parameters.AddWithValue("$email", email);
+            insertCmd.Parameters.AddWithValue("$hash", hash);
+            insertCmd.Parameters.AddWithValue("$role", role);
+            insertCmd.ExecuteNonQuery();
         }
     }
 

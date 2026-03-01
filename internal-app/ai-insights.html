@@ -43,7 +43,7 @@
         <h4 class="fw-bold mb-0">Bottle Scan Analytics</h4>
         <p class="text-muted small mb-0">All bottles collected via RVM machines · Live data</p>
       </div>
-      <button class="btn btn-outline-secondary btn-sm" onclick="exportScans()">Export Scan Data CSV</button>
+      <button class="btn btn-outline-secondary btn-sm" data-admin-only onclick="exportScans()">Export Scan Data CSV</button>
     </div>
 
     <!-- KPI ROW -->
@@ -147,7 +147,7 @@
   <script src="app.js"></script>
   <script>
     if (!checkAuth()) throw new Error('unauth');
-    document.getElementById('adminName').textContent = localStorage.getItem('adminName') || '';
+    showNavUser();
     setActivePage();
 
     const BRAND_COLORS = {

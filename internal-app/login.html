@@ -62,6 +62,7 @@
         const data = await res.json();
         localStorage.setItem('adminToken', data.token);
         localStorage.setItem('adminName', data.name);
+        localStorage.setItem('adminRole', data.role);
         window.location.href = 'index.html';
       } else {
         const err = document.getElementById('error');

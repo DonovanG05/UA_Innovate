@@ -21,6 +21,7 @@ public class RvmController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = "admin,sustainability")]
     public IActionResult GetRvms([FromQuery] int? areaId)
     {
         using var conn = _db.Connect();
@@ -149,7 +150,7 @@ public class RvmController : ControllerBase
     }
 
     [HttpGet("scans/stats")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,marketing,sustainability")]
     public IActionResult GetScanStats()
     {
         using var conn = _db.Connect();
@@ -224,7 +225,7 @@ public class RvmController : ControllerBase
     }
 
     [HttpGet("impact")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "admin,sustainability")]
     public IActionResult GetImpact([FromQuery] int areaId, [FromQuery] int rvmCount)
     {
         using var conn = _db.Connect();

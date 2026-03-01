@@ -130,7 +130,7 @@
               </div>
             </div>
             <div class="col-md-4 text-end">
-              <a href="/api/export/scans" class="btn btn-outline-secondary btn-sm" onclick="return exportCsv('/api/export/scans', 'scans.csv')">
+              <a href="/api/export/scans" class="btn btn-outline-secondary btn-sm" data-admin-only onclick="return exportCsv('/api/export/scans', 'scans.csv')">
                 Export Scan Data CSV
               </a>
             </div>
@@ -145,7 +145,8 @@
   <script src="app.js"></script>
   <script>
     if (!checkAuth()) throw new Error('unauth');
-    document.getElementById('adminName').textContent = localStorage.getItem('adminName') || '';
+    checkPageAccess(['admin', 'sustainability']);
+    showNavUser();
     setActivePage();
 
     const areaSelect = document.getElementById('areaSelect');

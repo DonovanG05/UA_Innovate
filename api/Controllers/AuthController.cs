@@ -33,7 +33,7 @@ public class AuthController : ControllerBase
         conn.Open();
 
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT id, password_hash FROM admin_users WHERE email = $email";
+        cmd.CommandText = "SELECT id, password_hash, role FROM admin_users WHERE email = $email";
         cmd.Parameters.AddWithValue("$email", req.Email.Trim().ToLower());
 
         using var reader = cmd.ExecuteReader();
@@ -41,12 +41,19 @@ public class AuthController : ControllerBase
 
         var id = reader.GetInt32(0);
         var storedHash = reader.GetString(1);
+        var role = reader.GetString(2);
 
         if (!VerifyPassword(req.Password, storedHash))
             return Unauthorized(new { error = "Invalid credentials" });
 
-        var token = GenerateToken(id, req.Email, "Admin", "admin");
-        return Ok(new AuthResponse(token, "admin", "Admin", id));
+        var displayName = role switch {
+            "marketing"      => "Marketing",
+            "sustainability" => "Sustainability",
+            _                => "Admin"
+        };
+
+        var token = GenerateToken(id, req.Email, displayName, role);
+        return Ok(new AuthResponse(token, role, displayName, id));
     }
 
     // POST /api/auth/register

@@ -6,7 +6,7 @@ namespace api.Controllers;
 
 [ApiController]
 [Route("api/dashboard")]
-[Authorize(Roles = "admin")]
+[Authorize(Roles = "admin,marketing,sustainability")]
 public class DashboardController : ControllerBase
 {
     private readonly Database _db;
