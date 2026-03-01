@@ -329,9 +329,11 @@ public static class Seeder
                 var ev = reader.GetDouble(7);
                 var re = reader.GetDouble(8);
 
+                var bottleData = GetBottleSummary(t.Id, conn);
+
                 var insight = await gemini.GenerateInsight(t.Name, t.Type, grade, total, 
                     (trucking/total)*100, (factory/total)*100, (energy/total)*100, (other/total)*100, 
-                    rvm, ev, re);
+                    rvm, ev, re, bottleData);
 
                 var insCmd = conn.CreateCommand();
                 insCmd.CommandText = "INSERT INTO ai_insights (area_id, insight_text, suggestion_type, generated_at) VALUES ($id, $text, 'strategic', $now)";
@@ -344,6 +346,48 @@ public static class Seeder
     }
 
     // ── HELPERS ──────────────────────────────────────────────────────────────
+
+    private static string GetBottleSummary(int areaId, SqliteConnection conn)
+    {
+        var scanCmd = conn.CreateCommand();
+        scanCmd.CommandText = """
+            SELECT COUNT(*), 
+                   SUM(CASE WHEN material_type = 'plastic' THEN 1 ELSE 0 END) as plastic,
+                   SUM(CASE WHEN material_type = 'aluminum' THEN 1 ELSE 0 END) as aluminum
+            FROM rvm_scans s
+            JOIN rvm_machines m ON s.rvm_id = m.id
+            WHERE m.area_id = $areaId
+        """;
+        scanCmd.Parameters.AddWithValue("$areaId", areaId);
+        
+        using var reader = scanCmd.ExecuteReader();
+        if (!reader.Read() || reader.GetInt32(0) == 0) return "No recycling data available.";
+        
+        var total = reader.GetInt32(0);
+        var plastic = reader.GetInt32(1);
+        var aluminum = reader.GetInt32(2);
+        reader.Close();
+
+        var brandCmd = conn.CreateCommand();
+        brandCmd.CommandText = """
+            SELECT brand, COUNT(*) as cnt
+            FROM rvm_scans s
+            JOIN rvm_machines m ON s.rvm_id = m.id
+            WHERE m.area_id = $areaId AND brand IS NOT NULL
+            GROUP BY brand ORDER BY cnt DESC LIMIT 3
+        """;
+        brandCmd.Parameters.AddWithValue("$areaId", areaId);
+        
+        var brands = new List<string>();
+        using var brandReader = brandCmd.ExecuteReader();
+        while (brandReader.Read())
+        {
+            brands.Add($"{brandReader.GetString(0)} ({brandReader.GetInt32(1)})");
+        }
+
+        var brandSummary = brands.Count > 0 ? "Top brands: " + string.Join(", ", brands) : "No brand data.";
+        return $"Total scans: {total} (Plastic: {plastic}, Aluminum: {aluminum}). {brandSummary}";
+    }
 
     private static void InsertMockScans(SqliteConnection conn)
     {

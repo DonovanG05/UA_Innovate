@@ -20,10 +20,12 @@ public class GeminiService
     }
 
     public async Task<string> GenerateInsight(string name, string type, string grade, double total, 
-        double t, double f, double e, double o, int rvmCount, double evPct, double rePct)
+        double t, double f, double e, double o, int rvmCount, double evPct, double rePct, string bottleData = "")
     {
         if (string.IsNullOrEmpty(_apiKey) || _apiKey == "paste_your_key_here" || _apiKey == "your_gemini_api_key_here")
             return "Gemini API key not configured. Please add it to appsettings.json to see AI recommendations.";
+
+        var bottleContext = string.IsNullOrEmpty(bottleData) ? "" : $"\nRecycling Data: {bottleData}";
 
         var prompt = $"""
             You are a sustainability advisor for The Coca-Cola Company. 
@@ -33,7 +35,7 @@ public class GeminiService
             Breakdown: trucking {t}%, factory {f}%, energy {e}%, other {o}%. 
             Current RVMs deployed: {rvmCount}. 
             EV fleet: {evPct}%. 
-            Renewable energy: {rePct}%. 
+            Renewable energy: {rePct}%. {bottleContext}
             Provide exactly 3 specific, actionable recommendations to reduce carbon footprint. 
             At least one must address RVM expansion and one must address electric vehicle fleet adoption. 
             Be concise and practical.
@@ -42,18 +44,20 @@ public class GeminiService
         return await CallGemini(prompt);
     }
 
-    public async Task<string> QueryWithContext(string areaName, string grade, double totalEmissions, string userQuestion)
+    public async Task<string> QueryWithContext(string areaName, string grade, double totalEmissions, int rvmCount, double evPct, double rePct, string bottleData, string userQuestion)
     {
         if (string.IsNullOrEmpty(_apiKey) || _apiKey == "paste_your_key_here" || _apiKey == "your_gemini_api_key_here")
             return "Gemini API key not configured. I'm unable to answer your question at this time.";
 
         var prompt = $"""
-            Context: You are a sustainability advisor for The Coca-Cola Company. 
-            The current focus is {areaName}, which has a sustainability grade of '{grade}' and total emissions of {totalEmissions} MTCO2e.
-            
+            Context: You are a sustainability advisor for The Coca-Cola Company.
+            Area: {areaName} | Grade: {grade} | Total Emissions: {totalEmissions:F0} MTCO2e
+            Sustainability Initiatives: {rvmCount} RVMs deployed, {evPct}% EV fleet, {rePct}% renewable energy.
+            Recycling Activity: {bottleData}
+
             User Question: {userQuestion}
-            
-            Provide a professional, helpful, and concise answer based on the context of Coca-Cola's sustainability goals.
+
+            Provide a professional, helpful, and concise answer based on the context provided.
             """;
 
         return await CallGemini(prompt);
