@@ -50,6 +50,81 @@ public class RvmController : ControllerBase
         return Ok(rvms);
     }
 
+    [HttpGet("scans/stats")]
+    [Authorize(Roles = "admin")]
+    public IActionResult GetScanStats()
+    {
+        using var conn = _db.Connect();
+        conn.Open();
+
+        // Totals
+        var totalCmd = conn.CreateCommand();
+        totalCmd.CommandText = "SELECT COUNT(*), COALESCE(SUM(points_awarded),0) FROM rvm_scans";
+        using var tr = totalCmd.ExecuteReader();
+        tr.Read();
+        var totalScans = tr.GetInt32(0);
+        var totalPoints = tr.GetInt32(1);
+        tr.Close();
+
+        // By material
+        var matCmd = conn.CreateCommand();
+        matCmd.CommandText = """
+            SELECT COALESCE(material_type,'unknown'), COUNT(*)
+            FROM rvm_scans GROUP BY material_type
+        """;
+        var byMaterial = new Dictionary<string, int>();
+        using var mr = matCmd.ExecuteReader();
+        while (mr.Read()) byMaterial[mr.GetString(0)] = mr.GetInt32(1);
+        mr.Close();
+
+        // By brand
+        var brandCmd = conn.CreateCommand();
+        brandCmd.CommandText = """
+            SELECT COALESCE(brand,'unknown'), COUNT(*)
+            FROM rvm_scans GROUP BY brand ORDER BY COUNT(*) DESC
+        """;
+        var byBrand = new List<object>();
+        using var br = brandCmd.ExecuteReader();
+        while (br.Read()) byBrand.Add(new { brand = br.GetString(0), count = br.GetInt32(1) });
+        br.Close();
+
+        // By RVM location (top 10)
+        var locCmd = conn.CreateCommand();
+        locCmd.CommandText = """
+            SELECT m.location_name, COUNT(*) as cnt
+            FROM rvm_scans s JOIN rvm_machines m ON s.rvm_id = m.id
+            GROUP BY m.location_name ORDER BY cnt DESC LIMIT 10
+        """;
+        var byLocation = new List<object>();
+        using var lr = locCmd.ExecuteReader();
+        while (lr.Read()) byLocation.Add(new { location = lr.GetString(0), count = lr.GetInt32(1) });
+        lr.Close();
+
+        // Recent 20 scans
+        var recentCmd = conn.CreateCommand();
+        recentCmd.CommandText = """
+            SELECT s.scanned_at, m.location_name,
+                   COALESCE(s.material_type,'—'), COALESCE(s.brand,'—'), s.points_awarded
+            FROM rvm_scans s JOIN rvm_machines m ON s.rvm_id = m.id
+            ORDER BY s.scanned_at DESC LIMIT 20
+        """;
+        var recent = new List<object>();
+        using var rr = recentCmd.ExecuteReader();
+        while (rr.Read())
+        {
+            recent.Add(new
+            {
+                scannedAt = rr.GetString(0),
+                location = rr.GetString(1),
+                material = rr.GetString(2),
+                brand = rr.GetString(3),
+                points = rr.GetInt32(4)
+            });
+        }
+
+        return Ok(new { totalScans, totalPoints, byMaterial, byBrand, byLocation, recentScans = recent });
+    }
+
     [HttpGet("impact")]
     [Authorize(Roles = "admin")]
     public IActionResult GetImpact([FromQuery] int areaId, [FromQuery] int rvmCount)

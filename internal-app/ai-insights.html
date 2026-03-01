@@ -3,18 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Insights — Coca-Cola Sustainability</title>
+  <title>Bottle Data — Coca-Cola Sustainability</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="theme.css" rel="stylesheet">
   <style>
     .kpi-card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-    .insight-card { border-left: 5px solid var(--client-red); }
-    .chat-box { height: 400px; overflow-y: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,.05); }
-    .msg { margin-bottom: 15px; max-width: 85%; padding: 12px 16px; border-radius: 18px; position: relative; }
-    .msg-user { color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 4px; }
-    .msg-ai { background: #f8f9fa; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #dee2e6; }
-    .ai-typing { font-style: italic; color: #6c757d; font-size: 0.85rem; }
-    .x-small { font-size: 0.7rem; }
+    .kpi-value { font-size: 2rem; font-weight: 700; }
+    .brand-bar { height: 10px; border-radius: 4px; background: #F40009; }
+    .material-plastic { background: #0d6efd; }
+    .material-aluminum { background: #198754; }
+    .chart-wrap { position: relative; height: 260px; }
   </style>
 </head>
 <body>
@@ -30,7 +28,7 @@
           <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
           <li class="nav-item"><a class="nav-link" href="emissions.html">Emissions</a></li>
           <li class="nav-item"><a class="nav-link" href="rvm-impact.html">RVM Impact</a></li>
-          <li class="nav-item"><a class="nav-link" href="ai-insights.html">AI Insights</a></li>
+          <li class="nav-item"><a class="nav-link" href="ai-insights.html">Bottle Data</a></li>
           <li class="nav-item"><a class="nav-link" href="users.html">Users</a></li>
         </ul>
         <span class="navbar-text me-3 text-white-50 small" id="adminName"></span>
@@ -40,153 +38,236 @@
   </nav>
 
   <div class="container-fluid py-4 px-4">
-    <div class="mb-4">
-      <h4 class="fw-bold mb-0">Gemini AI Insights</h4>
-      <p class="text-muted small">Actionable recommendations powered by Google Gemini 1.5 Flash.</p>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="fw-bold mb-0">Bottle Scan Analytics</h4>
+        <p class="text-muted small mb-0">All bottles collected via RVM machines · Live data</p>
+      </div>
+      <button class="btn btn-outline-secondary btn-sm" onclick="exportScans()">Export Scan Data CSV</button>
     </div>
 
-    <div class="row g-4">
-      <!-- PRE-GENERATED INSIGHTS -->
-      <div class="col-lg-7">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h6 class="fw-bold mb-0">Strategy Recommendations</h6>
-          <select class="form-select form-select-sm w-auto" id="areaFilter" onchange="loadInsights()">
-            <option value="">All Areas</option>
-          </select>
+    <!-- KPI ROW -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-xl-3">
+        <div class="card kpi-card h-100 p-3">
+          <p class="text-muted small mb-1">Total Bottles Scanned</p>
+          <div class="kpi-value text-danger" id="kpiTotal">—</div>
+          <p class="small text-muted mb-0">All time</p>
         </div>
-        
-        <div id="insightsList">
-          <div class="text-center py-5">
-            <div class="spinner-border text-danger" role="status"></div>
-            <p class="mt-2 text-muted">Analyzing sustainability data...</p>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="card kpi-card h-100 p-3">
+          <p class="text-muted small mb-1">Points Awarded</p>
+          <div class="kpi-value" id="kpiPoints">—</div>
+          <p class="small text-muted mb-0">Total loyalty points</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="card kpi-card h-100 p-3">
+          <p class="text-muted small mb-1">Top Brand</p>
+          <div class="kpi-value" id="kpiTopBrand">—</div>
+          <p class="small text-muted mb-0">Most recycled</p>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="card kpi-card h-100 p-3">
+          <p class="text-muted small mb-1">Top Material</p>
+          <div class="kpi-value" id="kpiTopMaterial">—</div>
+          <p class="small text-muted mb-0">By volume</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <!-- BRAND BREAKDOWN CHART -->
+      <div class="col-lg-6">
+        <div class="card kpi-card h-100">
+          <div class="card-header bg-white border-bottom fw-semibold">Scans by Brand</div>
+          <div class="card-body">
+            <div class="chart-wrap">
+              <canvas id="brandChart"></canvas>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- LIVE QUERY -->
-      <div class="col-lg-5">
-        <div class="card kpi-card h-100">
-          <div class="card-header bg-white py-3 fw-semibold border-bottom">
-            Live AI Consultant
+      <!-- MATERIAL BREAKDOWN + TOP LOCATIONS -->
+      <div class="col-lg-6">
+        <div class="card kpi-card mb-3">
+          <div class="card-header bg-white border-bottom fw-semibold">Material Breakdown</div>
+          <div class="card-body" id="materialPanel">
+            <p class="text-muted small">Loading...</p>
           </div>
-          <div class="card-body d-flex flex-column">
-            <div class="mb-3">
-              <label class="form-label small fw-bold">Select Context Area</label>
-              <select class="form-select form-select-sm" id="queryArea">
-                <option value="">Choose an area...</option>
-              </select>
-            </div>
+        </div>
 
-            <div class="chat-box d-flex flex-column mb-3" id="chatBox">
-              <div class="msg msg-ai">
-                Hello! I am your Gemini sustainability consultant. Select an area above and ask me anything about its carbon footprint or reduction strategies.
-              </div>
-            </div>
-
-            <div class="input-group">
-              <input type="text" id="userInput" class="form-control" placeholder="Ask a question..." onkeypress="if(event.key==='Enter') sendQuery()">
-              <button class="btn btn-danger" type="button" onclick="sendQuery()" id="sendBtn">Ask</button>
-            </div>
+        <div class="card kpi-card">
+          <div class="card-header bg-white border-bottom fw-semibold">Top RVM Locations</div>
+          <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+              <thead class="table-light small text-uppercase">
+                <tr><th>Location</th><th class="text-end">Scans</th></tr>
+              </thead>
+              <tbody id="locationTable">
+                <tr><td colspan="2" class="text-center py-3 text-muted">Loading...</td></tr>
+              </tbody>
+            </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECENT SCANS TABLE -->
+    <div class="card kpi-card">
+      <div class="card-header bg-white border-bottom fw-semibold">Recent Scans</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm mb-0">
+            <thead class="table-light small text-uppercase">
+              <tr>
+                <th>Time</th>
+                <th>RVM Location</th>
+                <th>Material</th>
+                <th>Brand</th>
+                <th class="text-end">Points</th>
+              </tr>
+            </thead>
+            <tbody id="recentTable">
+              <tr><td colspan="5" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-danger me-2" role="status"></div>Loading...
+              </td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>
   <script>
     if (!checkAuth()) throw new Error('unauth');
     document.getElementById('adminName').textContent = localStorage.getItem('adminName') || '';
     setActivePage();
 
-    async function loadAreas() {
-      const res = await apiFetch('/api/areas');
-      if (!res) return;
-      const areas = await res.json();
-      populateAreaSelectWithGroups(document.getElementById('areaFilter'), areas);
-      populateAreaSelectWithGroups(document.getElementById('queryArea'), areas);
-    }
+    const BRAND_COLORS = {
+      'coke': '#F40009',
+      'diet-coke': '#c00',
+      'sprite': '#198754',
+      'fanta': '#fd7e14',
+      'other': '#6c757d',
+      'unknown': '#adb5bd'
+    };
 
-    async function loadInsights() {
-      const areaId = document.getElementById('areaFilter').value;
-      const res = await apiFetch(`/api/insights${areaId ? '?areaId=' + areaId : ''}`);
-      const data = await res.json();
-      
-      const list = document.getElementById('insightsList');
-      if (data.length === 0) {
-        list.innerHTML = `
-          <div class="card kpi-card p-5 text-center">
-            <p class="text-muted mb-0">No insights found for this area. Gemini will generate them during the next scheduled analysis.</p>
-          </div>
-        `;
-        return;
-      }
+    const BRAND_LABELS = {
+      'coke': 'Coke', 'diet-coke': 'Diet Coke', 'sprite': 'Sprite',
+      'fanta': 'Fanta', 'other': 'Other', 'unknown': 'Unknown'
+    };
 
-      list.innerHTML = data.map(i => `
-        <div class="card kpi-card p-4 mb-3 insight-card">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <div>
-              <h6 class="fw-bold mb-0">${i.areaName}</h6>
-              <span class="text-muted x-small">${new Date(i.generatedAt).toLocaleDateString()}</span>
-            </div>
-            ${gradeBadge(i.grade)}
+    async function load() {
+      const res = await apiFetch('/api/rvm/scans/stats');
+      if (!res || !res.ok) return;
+      const d = await res.json();
+
+      // KPIs
+      document.getElementById('kpiTotal').textContent = fmt(d.totalScans);
+      document.getElementById('kpiPoints').textContent = fmt(d.totalPoints);
+
+      const topBrand = d.byBrand && d.byBrand.length > 0 ? d.byBrand[0] : null;
+      document.getElementById('kpiTopBrand').textContent = topBrand ? (BRAND_LABELS[topBrand.brand] || topBrand.brand) : '—';
+
+      const matEntries = Object.entries(d.byMaterial || {}).filter(([k]) => k !== 'unknown');
+      const topMat = matEntries.sort((a, b) => b[1] - a[1])[0];
+      document.getElementById('kpiTopMaterial').textContent = topMat ? (topMat[0].charAt(0).toUpperCase() + topMat[0].slice(1)) : '—';
+
+      // Brand chart
+      const brandLabels = (d.byBrand || []).map(b => BRAND_LABELS[b.brand] || b.brand);
+      const brandCounts = (d.byBrand || []).map(b => b.count);
+      const brandColors = (d.byBrand || []).map(b => BRAND_COLORS[b.brand] || '#adb5bd');
+
+      new Chart(document.getElementById('brandChart'), {
+        type: 'bar',
+        data: {
+          labels: brandLabels,
+          datasets: [{ label: 'Scans', data: brandCounts, backgroundColor: brandColors, borderRadius: 6 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+      });
+
+      // Material breakdown
+      const total = d.totalScans || 1;
+      const matMap = d.byMaterial || {};
+      const plastic = matMap['plastic'] || 0;
+      const aluminum = matMap['aluminum'] || 0;
+      const unknown = total - plastic - aluminum;
+      document.getElementById('materialPanel').innerHTML = `
+        <div class="mb-3">
+          <div class="d-flex justify-content-between small mb-1">
+            <span><span class="badge bg-primary me-1">Plastic</span></span>
+            <span class="fw-semibold">${fmt(plastic)} (${Math.round(plastic/total*100)}%)</span>
           </div>
-          <p class="small mb-0 text-secondary" style="white-space: pre-wrap;">${i.insightText}</p>
+          <div class="progress" style="height:10px">
+            <div class="progress-bar bg-primary" style="width:${plastic/total*100}%"></div>
+          </div>
         </div>
+        <div class="mb-3">
+          <div class="d-flex justify-content-between small mb-1">
+            <span><span class="badge bg-success me-1">Aluminum</span></span>
+            <span class="fw-semibold">${fmt(aluminum)} (${Math.round(aluminum/total*100)}%)</span>
+          </div>
+          <div class="progress" style="height:10px">
+            <div class="progress-bar bg-success" style="width:${aluminum/total*100}%"></div>
+          </div>
+        </div>
+        ${unknown > 0 ? `
+        <div>
+          <div class="d-flex justify-content-between small mb-1">
+            <span><span class="badge bg-secondary me-1">Not recorded</span></span>
+            <span class="fw-semibold">${fmt(unknown)} (${Math.round(unknown/total*100)}%)</span>
+          </div>
+          <div class="progress" style="height:10px">
+            <div class="progress-bar bg-secondary" style="width:${unknown/total*100}%"></div>
+          </div>
+        </div>` : ''}
+      `;
+
+      // Top locations
+      const locRows = (d.byLocation || []).map((l, i) => `
+        <tr>
+          <td class="small">${i + 1}. ${l.location}</td>
+          <td class="text-end fw-semibold">${fmt(l.count)}</td>
+        </tr>
       `).join('');
+      document.getElementById('locationTable').innerHTML = locRows || '<tr><td colspan="2" class="text-center text-muted py-3">No data</td></tr>';
+
+      // Recent scans
+      const recentRows = (d.recentScans || []).map(s => `
+        <tr>
+          <td class="small text-muted">${new Date(s.scannedAt).toLocaleString()}</td>
+          <td class="small">${s.location}</td>
+          <td><span class="badge ${s.material === 'plastic' ? 'bg-primary' : s.material === 'aluminum' ? 'bg-success' : 'bg-secondary'}">${s.material}</span></td>
+          <td class="small">${BRAND_LABELS[s.brand] || s.brand}</td>
+          <td class="text-end small fw-semibold">+${s.points}</td>
+        </tr>
+      `).join('');
+      document.getElementById('recentTable').innerHTML = recentRows || '<tr><td colspan="5" class="text-center text-muted py-4">No scans recorded yet.</td></tr>';
     }
 
-    async function sendQuery() {
-      const areaId = document.getElementById('queryArea').value;
-      const input = document.getElementById('userInput');
-      const chat = document.getElementById('chatBox');
-      const btn = document.getElementById('sendBtn');
-      const question = input.value.trim();
-
-      if (!areaId) { alert('Please select a context area first.'); return; }
-      if (!question) return;
-
-      // Add user message
-      const uMsg = document.createElement('div');
-      uMsg.className = 'msg msg-user';
-      uMsg.textContent = question;
-      chat.appendChild(uMsg);
-      input.value = '';
-      chat.scrollTop = chat.scrollHeight;
-
-      // Add typing indicator
-      const tMsg = document.createElement('div');
-      tMsg.className = 'msg msg-ai ai-typing';
-      tMsg.id = 'typing';
-      tMsg.textContent = 'Gemini is thinking...';
-      chat.appendChild(tMsg);
-      chat.scrollTop = chat.scrollHeight;
-
-      btn.disabled = true;
-
-      try {
-        const res = await apiFetch('/api/insights/query', {
-          method: 'POST',
-          body: JSON.stringify({ areaId: parseInt(areaId), question })
-        });
-        const data = await res.json();
-        
-        document.getElementById('typing').remove();
-        const aMsg = document.createElement('div');
-        aMsg.className = 'msg msg-ai';
-        aMsg.textContent = data.answer;
-        chat.appendChild(aMsg);
-      } catch (e) {
-        document.getElementById('typing').textContent = 'Error: Failed to connect to Gemini.';
-      } finally {
-        btn.disabled = false;
-        chat.scrollTop = chat.scrollHeight;
-      }
+    async function exportScans() {
+      const res = await apiFetch('/api/export/scans');
+      if (!res || !res.ok) { alert('Export failed.'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'scans.csv'; a.click();
+      URL.revokeObjectURL(url);
     }
 
-    loadAreas();
-    loadInsights();
+    load();
   </script>
 </body>
 </html>
