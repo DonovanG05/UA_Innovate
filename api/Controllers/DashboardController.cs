@@ -19,24 +19,16 @@ public class DashboardController : ControllerBase
         using var conn = _db.Connect();
         conn.Open();
 
-        // Total emissions from all US state + Canadian province + Mexican state rows (year 2023)
+        // Total emissions from country-level areas (year 2023). SQLite SUM returns real, not long.
         var totalCmd = conn.CreateCommand();
         totalCmd.CommandText = """
-            SELECT COALESCE(SUM(ed.amount_mtco2e), 0)
-            FROM emissions_data ed
-            JOIN areas a ON a.id = ed.area_id
-            WHERE a.type = 'country' AND ed.year = 2023
-        """;
-        var totalEmissions = (double)(long)totalCmd.ExecuteScalar()!;
-        // SQLite SUM returns real, cast accordingly
-        var totalCmd2 = conn.CreateCommand();
-        totalCmd2.CommandText = """
             SELECT CAST(COALESCE(SUM(ed.amount_mtco2e), 0) AS REAL)
             FROM emissions_data ed
             JOIN areas a ON a.id = ed.area_id
             WHERE a.type = 'country' AND ed.year = 2023
         """;
-        totalEmissions = Convert.ToDouble(totalCmd2.ExecuteScalar());
+        var totalObj = totalCmd.ExecuteScalar();
+        var totalEmissions = (totalObj == null || totalObj == DBNull.Value) ? 0d : Convert.ToDouble(totalObj);
 
         // Grade counts for states
         var gradeCmd = conn.CreateCommand();
