@@ -3,15 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Scan — Coca-Cola Rewards</title>
+  <title>Settings — Coca-Cola Rewards</title>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    :root { --coke-red: #F40009; --coke-soft: #fef2f1; }
+    :root { --coke-red: #F40009; --coke-soft: #fef2f1; --coke-gray: #4a4a4a; }
     body { background: linear-gradient(180deg, var(--coke-soft) 0%, #f5e6e4 100%); padding-bottom: 80px; font-family: 'Quicksand', sans-serif; }
     .nav-bottom { background: #fff; border-top: 2px solid rgba(244,0,9,0.15); position: fixed; bottom: 0; width: 100%; z-index: 1000; }
     .nav-bottom .nav-link { color: #4a4a4a; font-size: 0.75rem; text-align: center; font-weight: 600; }
     .nav-bottom .nav-link.active { color: var(--coke-red); font-weight: 700; }
+    .profile-card { border: none; border-radius: 20px; box-shadow: 0 4px 16px rgba(244,0,9,0.08); }
+    .profile-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .profile-row:last-child { border-bottom: none; }
+    .profile-label { font-size: 0.8rem; color: #6c757d; font-weight: 600; }
+    .profile-value { font-size: 0.95rem; font-weight: 700; color: var(--coke-gray); text-align: right; max-width: 60%; }
   </style>
 </head>
 <body>
@@ -22,25 +27,21 @@
           <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
         </svg>
       </a>
-      <h5 class="fw-bold mb-0" style="color: #4a4a4a;">Scan</h5>
+      <h5 class="fw-bold mb-0" style="color: var(--coke-gray);">Settings</h5>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white text-center">
-      <h6 class="fw-bold mb-1" style="color: #4a4a4a;">Your QR code</h6>
-      <p class="text-muted x-small mb-3">Hold this up to the machine to identify your account.</p>
-      <div id="userQrCode" class="d-flex justify-content-center" style="min-height: 180px;"></div>
-    </div>
-
-    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
-      <h6 class="fw-bold mb-2" style="color: #4a4a4a;">Nearest RVM</h6>
-      <p class="text-muted small mb-3">Based on your saved zip code.</p>
-      <div id="nearestRvmContent">
-        <p class="text-muted mb-0">Loading…</p>
+    <div class="card profile-card p-4 mb-4 bg-white">
+      <h6 class="fw-bold mb-3" style="color: var(--coke-gray);">Profile</h6>
+      <p class="text-muted small mb-3">Your account info from sign-in and registration.</p>
+      <div id="profileContent">
+        <div class="text-center py-4">
+          <div class="spinner-border spinner-border-sm text-danger" role="status"></div>
+          <p class="small text-muted mt-2 mb-0">Loading profile…</p>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- BOTTOM NAV -->
   <nav class="nav-bottom py-2">
     <div class="container d-flex justify-content-around">
       <a href="index.html" class="nav-link">
@@ -49,7 +50,7 @@
         </svg>
         Home
       </a>
-      <a href="scan.html" class="nav-link active">
+      <a href="scan.html" class="nav-link">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
           <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0v-3Zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5ZM.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5Zm15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5Z"/>
         </svg>
@@ -72,38 +73,50 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="app.js"></script>
   <script>
     if (!checkAuth()) throw new Error('unauth');
     setActivePage();
 
-    (async function loadUserQr() {
-      const res = await apiFetch('/api/users/me');
-      if (!res || !res.ok) return;
-      const user = await res.json();
-      if (user.qrIdentifier && typeof QRCode !== 'undefined') {
-        var qrEl = document.getElementById('userQrCode');
-        if (!qrEl) return;
-        qrEl.innerHTML = '';
-        new QRCode(qrEl, { text: user.qrIdentifier, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
-      }
-    })();
+    function formatMemberSince(createdAt) {
+      if (!createdAt) return '—';
+      var d = new Date(createdAt);
+      return isNaN(d.getTime()) ? createdAt : d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    }
 
-    (async function loadNearestRvm() {
-      const el = document.getElementById('nearestRvmContent');
-      if (!el) return;
-      const res = await apiFetch('/api/rvm/nearest');
-      if (!res) { el.innerHTML = '<p class="text-muted mb-0">Unable to load nearest RVM.</p>'; return; }
-      const data = await res.json();
-      if (data.message && !data.locationName) {
-        el.innerHTML = '<p class="text-muted mb-0">' + (data.message || 'No RVM found.') + '</p>';
+    function formatAddress(addr) {
+      if (!addr) return '—';
+      try {
+        var o = typeof addr === 'string' ? JSON.parse(addr) : addr;
+        if (o && (o.street || o.city || o.state || o.zip)) {
+          var parts = [o.street, o.city, o.state, o.zip].filter(Boolean);
+          return parts.length ? parts.join(', ') : '—';
+        }
+      } catch (e) {}
+      return typeof addr === 'string' ? addr : '—';
+    }
+
+    function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    async function loadProfile() {
+      var res = await apiFetch('/api/users/me');
+      var el = document.getElementById('profileContent');
+      if (!res || !res.ok) {
+        el.innerHTML = '<p class="text-muted small mb-0">Could not load profile.</p>';
         return;
       }
-      let html = '<p class="fw-semibold mb-1" style="color: #4a4a4a;">' + (data.locationName || '—') + '</p>';
-      if (data.distanceMi != null) html += '<p class="text-muted small mb-0">' + data.distanceMi + ' mi away</p>';
-      el.innerHTML = html;
-    })();
+      var u = await res.json();
+      el.innerHTML =
+        '<div class="profile-row"><span class="profile-label">Name</span><span class="profile-value">' + esc(u.name) + '</span></div>' +
+        '<div class="profile-row"><span class="profile-label">Email</span><span class="profile-value">' + esc(u.email) + '</span></div>' +
+        '<div class="profile-row"><span class="profile-label">Age</span><span class="profile-value">' + (u.age != null ? u.age : '—') + '</span></div>' +
+        '<div class="profile-row"><span class="profile-label">Zip code</span><span class="profile-value">' + esc(u.zipCode) + '</span></div>' +
+        '<div class="profile-row"><span class="profile-label">Gender</span><span class="profile-value">' + esc(u.gender) + '</span></div>' +
+        '<div class="profile-row"><span class="profile-label">Shipping address</span><span class="profile-value">' + esc(formatAddress(u.address)) + '</span></div>' +
+        '<div class="profile-row"><span class="profile-label">Member since</span><span class="profile-value">' + esc(formatMemberSince(u.createdAt)) + '</span></div>';
+    }
+
+    loadProfile();
   </script>
 </body>
 </html>

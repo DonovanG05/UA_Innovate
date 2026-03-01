@@ -102,12 +102,20 @@
         <h5 class="fw-bold mb-0" style="color: var(--coke-gray);">Hi, <span id="userName">—</span>!</h5>
         <p class="text-muted small mb-0">Earth's looking better already. 🌍</p>
       </div>
-      <button class="btn rounded-circle p-2" style="background: var(--coke-soft); color: var(--coke-red);" onclick="logout()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-          <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-          <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-        </svg>
-      </button>
+      <div class="d-flex align-items-center gap-1">
+        <a href="settings.html" class="btn rounded-circle p-2" style="background: var(--coke-soft); color: var(--coke-red);" title="Settings" aria-label="Settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/>
+          </svg>
+        </a>
+        <button class="btn rounded-circle p-2" style="background: var(--coke-soft); color: var(--coke-red);" onclick="logout()" aria-label="Sign out">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+            <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- POINTS CARD -->
@@ -265,12 +273,18 @@
         const leaderboard = await lbRes.json();
         if (leaderboard.length > 0) {
           const LBS_PER_BOTTLE = 0.05;
+          const myFirstName = (user.name || '').trim().split(/\s+/)[0] || '';
           list.innerHTML = leaderboard.map(u => {
             const lbs = (u.scanCount || 0) * LBS_PER_BOTTLE;
+            const isMe = u.rank === 1 && (
+              (u.id != null && user.id != null && Number(u.id) === Number(user.id)) ||
+              (myFirstName && String(u.firstName || '').toLowerCase() === myFirstName.toLowerCase())
+            );
+            const displayName = isMe ? 'You' : u.firstName;
             return `
             <div class="leaderboard-row">
               <span class="leaderboard-rank">#${u.rank}</span>
-              <span class="leaderboard-name">${u.firstName}</span>
+              <span class="leaderboard-name">${displayName}</span>
               <span class="leaderboard-scans">${lbs.toFixed(1)} lbs</span>
             </div>
           `}).join('');

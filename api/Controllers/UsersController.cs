@@ -107,7 +107,7 @@ public class UsersController : ControllerBase
         conn.Open();
         var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            SELECT u.name, COALESCE(COUNT(s.id), 0) AS bottle_count
+            SELECT u.id, u.name, COALESCE(COUNT(s.id), 0) AS bottle_count
             FROM users u
             LEFT JOIN rvm_scans s ON s.user_id = u.id
             GROUP BY u.id, u.name
@@ -119,10 +119,11 @@ public class UsersController : ControllerBase
         var rank = 1;
         while (reader.Read())
         {
-            var name = reader.GetString(0);
-            var bottleCount = reader.GetInt32(1);
+            var id = reader.GetInt32(0);
+            var name = reader.GetString(1);
+            var bottleCount = reader.GetInt32(2);
             var firstName = name.Split(' ')[0];
-            list.Add(new { rank = rank++, firstName, scanCount = bottleCount });
+            list.Add(new { id, rank = rank++, firstName, scanCount = bottleCount });
         }
         return Ok(list);
     }
@@ -135,7 +136,7 @@ public class UsersController : ControllerBase
         conn.Open();
 
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT id, email, name, total_points, created_at, address, qr_identifier, gender, zip_code FROM users WHERE id = $userId";
+        cmd.CommandText = "SELECT id, email, name, total_points, created_at, address, qr_identifier, gender, zip_code, age FROM users WHERE id = $userId";
         cmd.Parameters.AddWithValue("$userId", userId);
 
         using var reader = cmd.ExecuteReader();
@@ -150,6 +151,7 @@ public class UsersController : ControllerBase
         var qrIdentifier = reader.FieldCount > 6 && !reader.IsDBNull(6) ? reader.GetString(6) : null;
         var gender = reader.FieldCount > 7 && !reader.IsDBNull(7) ? reader.GetString(7) : null;
         var zipCode = reader.FieldCount > 8 && !reader.IsDBNull(8) ? reader.GetString(8) : null;
+        var age = reader.FieldCount > 9 && !reader.IsDBNull(9) ? reader.GetInt32(9) : (int?)null;
         reader.Close();
 
         if (string.IsNullOrEmpty(qrIdentifier))
@@ -172,7 +174,8 @@ public class UsersController : ControllerBase
             address,
             qrIdentifier,
             gender,
-            zipCode
+            zipCode,
+            age
         });
     }
 

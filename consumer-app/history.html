@@ -6,7 +6,7 @@
   <title>Activity History — Coca-Cola Rewards</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background: #f8f9fa; padding-bottom: 80px; }
+    body { background: #f8f9fa; padding-bottom: 80px; font-family: 'Quicksand', sans-serif; }
     .nav-bottom { background: white; border-top: 1px solid #dee2e6; position: fixed; bottom: 0; width: 100%; z-index: 1000; }
     .nav-bottom .nav-link { color: #6c757d; font-size: 0.75rem; text-align: center; }
     .nav-bottom .nav-link.active { color: #F40009; font-weight: bold; }
@@ -15,6 +15,29 @@
     .badge-earn { background: #d1e7dd; color: #0f5132; }
     .badge-redeem { background: #f8d7da; color: #842029; }
     .x-small { font-size: 0.7rem; }
+    .month-section { margin-bottom: 1.5rem; }
+    .month-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 0 0.6rem; margin-bottom: 0.25rem;
+      border-bottom: 2px solid rgba(244,0,9,0.2);
+      font-weight: 700; font-size: 0.95rem; color: #4a4a4a;
+    }
+    .month-header .month-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: linear-gradient(135deg, #F40009, #c00);
+      color: white; display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .month-header .month-icon svg { width: 18px; height: 18px; }
+    .month-items .list-group-item { border-radius: 10px; margin-bottom: 0.35rem; }
+    .month-items .list-group-item:last-child { margin-bottom: 0; }
+    .month-header { cursor: pointer; user-select: none; }
+    .month-header:hover { opacity: 0.9; }
+    .month-header .month-chevron {
+      margin-left: auto; transition: transform 0.2s ease;
+    }
+    .month-header.collapsed .month-chevron { transform: rotate(-90deg); }
+    .month-section .month-items.collapsed { display: none; }
   </style>
 </head>
 <body>
@@ -30,7 +53,7 @@
 
     <div class="card history-card shadow-sm mb-4">
       <div class="card-body p-0">
-        <div id="historyList" class="list-group list-group-flush">
+        <div id="historyList" class="list-group list-group-flush p-3">
           <div class="text-center py-5">
             <div class="spinner-border text-danger spinner-border-sm" role="status"></div>
             <p class="small text-muted mt-2">Loading your history...</p>
@@ -77,6 +100,20 @@
     if (!checkAuth()) throw new Error('unauth');
     setActivePage();
 
+    const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const MONTH_ICON = '<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>';
+    const CHEVRON_DOWN = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>';
+
+    function getMonthKey(dateStr) {
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? 'unknown' : d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    }
+    function getMonthLabel(dateStr) {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return 'Other';
+      return MONTH_NAMES[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
     async function loadHistory() {
       const res = await apiFetch('/api/users/history');
       if (!res) return;
@@ -92,19 +129,56 @@
         return;
       }
 
-      list.innerHTML = history.map(h => `
-        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-          <div>
-            <p class="mb-0 fw-bold text-dark">${h.description}</p>
-            <p class="x-small text-muted mb-0">${fmtDate(h.createdAt)}</p>
+      const byMonth = {};
+      history.forEach(h => {
+        const key = getMonthKey(h.createdAt);
+        if (!byMonth[key]) byMonth[key] = { label: getMonthLabel(h.createdAt), items: [] };
+        byMonth[key].items.push(h);
+      });
+      const sortedMonths = Object.keys(byMonth).sort().reverse();
+
+      list.innerHTML = sortedMonths.map(key => {
+        const { label, items } = byMonth[key];
+        const itemsHtml = items.map(h => `
+          <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <div>
+              <p class="mb-0 fw-bold text-dark">${h.description}</p>
+              <p class="x-small text-muted mb-0">${fmtDate(h.createdAt)}</p>
+            </div>
+            <div class="text-end">
+              <span class="badge ${h.type === 'earn' ? 'badge-earn' : 'badge-redeem'} rounded-pill">
+                ${h.type === 'earn' ? '+' : '-'}${h.points} pts
+              </span>
+            </div>
           </div>
-          <div class="text-end">
-            <span class="badge ${h.type === 'earn' ? 'badge-earn' : 'badge-redeem'} rounded-pill">
-              ${h.type === 'earn' ? '+' : '-'}${h.points} pts
-            </span>
+        `).join('');
+        return `
+          <div class="month-section" data-month-key="${key}">
+            <div class="month-header collapsed" role="button" tabindex="0" aria-expanded="false" aria-controls="month-items-${key}" id="month-header-${key}">
+              <span class="month-icon">${MONTH_ICON}</span>
+              <span>${label}</span>
+              <span class="month-chevron text-secondary">${CHEVRON_DOWN}</span>
+            </div>
+            <div class="month-items list-group list-group-flush collapsed" id="month-items-${key}">${itemsHtml}</div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+
+      list.querySelectorAll('.month-header').forEach(header => {
+        header.addEventListener('click', () => {
+          const section = header.closest('.month-section');
+          const items = section.querySelector('.month-items');
+          const isCollapsed = items.classList.toggle('collapsed');
+          header.classList.toggle('collapsed', isCollapsed);
+          header.setAttribute('aria-expanded', !isCollapsed);
+        });
+        header.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            header.click();
+          }
+        });
+      });
     }
 
     loadHistory();
