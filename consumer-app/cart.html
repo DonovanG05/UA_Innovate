@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cart — Coca-Cola Rewards</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --coke-red: #F40009;
+      --coke-red-dark: #c00;
+      --coke-white: #fff;
+      --coke-gray: #4a4a4a;
+      --coke-soft: #fef2f1;
+    }
+    body { background: linear-gradient(180deg, var(--coke-soft) 0%, #f5e6e4 100%); padding-bottom: 80px; font-family: 'Quicksand', sans-serif; }
+    .nav-bottom { background: var(--coke-white); border-top: 2px solid rgba(244,0,9,0.15); position: fixed; bottom: 0; width: 100%; z-index: 1000; }
+    .nav-bottom .nav-link { color: #6c757d; font-size: 0.75rem; text-align: center; font-weight: 600; }
+    .nav-bottom .nav-link.active { color: var(--coke-red); font-weight: 700; }
+
+    .cart-item-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+      box-shadow: 0 2px 12px rgba(244,0,9,0.08);
+      border: 1px solid rgba(244,0,9,0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cart-item-card .item-name { font-weight: 700; color: var(--coke-gray); font-size: 1rem; margin-bottom: 0.2rem; }
+    .cart-item-card .item-meta { font-size: 0.8rem; color: #6c757d; }
+    .cart-item-card .item-pts {
+      background: linear-gradient(135deg, var(--coke-red), var(--coke-red-dark));
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.35rem 0.65rem;
+      border-radius: 10px;
+    }
+    .cart-empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      background: white;
+      border-radius: 20px;
+      border: 2px dashed rgba(244,0,9,0.2);
+      color: var(--coke-gray);
+      font-weight: 600;
+      margin-top: 1rem;
+    }
+    .cart-empty-state p { margin-bottom: 1rem; }
+    .cart-empty-state a {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--coke-red), var(--coke-red-dark));
+      color: white;
+      font-weight: 700;
+      padding: 0.6rem 1.25rem;
+      border-radius: 14px;
+      text-decoration: none;
+    }
+    .cart-empty-state a:hover { color: white; opacity: 0.95; }
+
+    .checkout-section { margin-top: 1.5rem; padding-top: 1rem; }
+    .btn-checkout {
+      width: 100%;
+      background: linear-gradient(135deg, var(--coke-red), var(--coke-red-dark));
+      color: white;
+      border: none;
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0.85rem 1.25rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(244,0,9,0.25);
+    }
+    .btn-checkout:hover { color: white; opacity: 0.95; }
+    .btn-checkout:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .checkout-success {
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(244,0,9,0.12);
+      border: 1px solid rgba(244,0,9,0.1);
+    }
+    .checkout-success .success-title { font-size: 1.25rem; font-weight: 800; color: var(--coke-red); margin-bottom: 0.5rem; }
+    .checkout-success .success-msg { color: var(--coke-gray); font-weight: 600; }
+
+    .modal-checkout .modal-dialog { max-width: 400px; }
+    .modal-checkout .modal-content { border-radius: 20px; overflow: hidden; border: none; box-shadow: 0 8px 32px rgba(244,0,9,0.15); }
+    .modal-checkout .modal-header { border-bottom: none; padding: 1.25rem 1.25rem 0; }
+    .modal-checkout .modal-body { padding: 1rem 1.25rem 1.25rem; }
+    .modal-checkout .form-label { font-weight: 700; color: var(--coke-gray); }
+    .modal-checkout .form-control { border-radius: 12px; }
+    .modal-checkout .row-cols-2 .col:last-child { max-width: 6rem; }
+    .modal-checkout .btn-confirm-checkout { background: linear-gradient(135deg, var(--coke-red), var(--coke-red-dark)); color: white; border: none; border-radius: 12px; font-weight: 700; padding: 0.6rem 1.25rem; }
+    .modal-checkout .btn-confirm-checkout:hover { color: white; opacity: 0.95; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid px-4 py-3">
+    <div class="d-flex align-items-center mb-4">
+      <a href="rewards.html" class="text-dark me-3">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+        </svg>
+      </a>
+      <h5 class="fw-bold mb-0" style="color: var(--coke-gray);">My Cart</h5>
+    </div>
+
+    <div id="cartList"></div>
+    <div id="cartEmpty" class="cart-empty-state d-none">
+      <p class="mb-0">Your cart is empty.</p>
+      <p class="small text-muted mb-3">Redeem rewards on the Rewards page to add items here.</p>
+      <a href="rewards.html">Browse rewards</a>
+    </div>
+
+    <!-- Checkout button (when cart has items) -->
+    <div id="checkoutSection" class="checkout-section d-none">
+      <button type="button" class="btn btn-checkout" id="checkoutBtn">Checkout</button>
+    </div>
+
+    <!-- Success state after checkout -->
+    <div id="checkoutSuccess" class="checkout-success d-none">
+      <p class="success-title">Your items are on the way!</p>
+      <p class="success-msg mb-3">Thanks for redeeming. We've saved your address for next time.</p>
+      <a href="index.html" class="btn btn-confirm-checkout" id="goHomeBtn">Go to Home</a>
+    </div>
+
+    <!-- Checkout modal: address + confirm -->
+    <div class="modal modal-checkout fade" id="checkoutModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title fw-bold" style="color: var(--coke-gray);">Shipping address</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="checkoutStepAddress">
+              <p class="small text-muted mb-3">Enter your shipping address. It will be saved to your account.</p>
+              <div class="mb-3">
+                <label for="checkoutStreet" class="form-label">Street address</label>
+                <input type="text" class="form-control" id="checkoutStreet" placeholder="123 Main St">
+              </div>
+              <div class="mb-3">
+                <label for="checkoutCity" class="form-label">City</label>
+                <input type="text" class="form-control" id="checkoutCity" placeholder="City">
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col">
+                  <label for="checkoutState" class="form-label">State</label>
+                  <input type="text" class="form-control" id="checkoutState" placeholder="State" maxlength="2">
+                </div>
+                <div class="col" style="max-width: 7rem;">
+                  <label for="checkoutZip" class="form-label">ZIP</label>
+                  <input type="text" class="form-control" id="checkoutZip" placeholder="ZIP" inputmode="numeric" maxlength="10">
+                </div>
+              </div>
+              <button type="button" class="btn btn-confirm-checkout w-100" id="checkoutConfirmBtn">Save address &amp; confirm order</button>
+            </div>
+            <div id="checkoutStepDone" class="d-none text-center py-2">
+              <p class="fw-bold text-success mb-0">Order confirmed!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="nav-bottom py-2">
+    <div class="container d-flex justify-content-around">
+      <a href="index.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z"/>
+        </svg>
+        Home
+      </a>
+      <a href="scan.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0v-3Zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5ZM.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5Zm15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5Z"/>
+        </svg>
+        Scan
+      </a>
+      <a href="rewards.html" class="nav-link active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path d="M3 2.5a.5.5 0 0 1 .5-.5L4 2l.5.5a.5.5 0 0 1 0 1L4 4l-.5-.5a.5.5 0 0 1-.5-.5zM5 2a.5.5 0 0 1 .5-.5L6 1l.5.5a.5.5 0 0 1 0 1L6 3l-.5-.5a.5.5 0 0 1-.5-.5zM0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2z"/>
+        </svg>
+        Rewards
+      </a>
+      <a href="history.html" class="nav-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-block mx-auto mb-1" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8zm15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0z"/>
+          <path d="M8.5 4.5a.5.5 0 0 0-1 0v3.31l-2.062 1.375a.5.5 0 1 0 .554.832l2.25-1.5a.5.5 0 0 0 .258-.422V4.5z"/>
+        </svg>
+        History
+      </a>
+    </div>
+  </nav>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!checkAuth()) throw new Error('unauth');
+    setActivePage();
+
+    function renderCart() {
+      const cart = getCart();
+      const listEl = document.getElementById('cartList');
+      const emptyEl = document.getElementById('cartEmpty');
+      const checkoutSection = document.getElementById('checkoutSection');
+      const successEl = document.getElementById('checkoutSuccess');
+      if (cart.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.classList.remove('d-none');
+        checkoutSection.classList.add('d-none');
+        successEl.classList.add('d-none');
+      } else {
+        emptyEl.classList.add('d-none');
+        successEl.classList.add('d-none');
+        checkoutSection.classList.remove('d-none');
+        listEl.innerHTML = cart.map(item => `
+          <div class="cart-item-card">
+            <div>
+              <div class="item-name">${item.rewardName}</div>
+              <div class="item-meta">${item.addedAt ? fmtDate(item.addedAt) : 'Redeemed'}</div>
+            </div>
+            <span class="item-pts">${item.points} pts</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function loadSavedAddress() {
+      const streetEl = document.getElementById('checkoutStreet');
+      const cityEl = document.getElementById('checkoutCity');
+      const stateEl = document.getElementById('checkoutState');
+      const zipEl = document.getElementById('checkoutZip');
+      if (!streetEl || !cityEl || !stateEl || !zipEl) return;
+      let addressJson = null;
+      try {
+        const res = await apiFetch('/api/users/me');
+        if (res && res.ok) {
+          const user = await res.json();
+          addressJson = user.address || null;
+        }
+      } catch (_) {}
+      if (!addressJson) {
+        try {
+          addressJson = localStorage.getItem('cokeShippingAddress');
+        } catch (_) {}
+      }
+      if (!addressJson) return;
+      try {
+        const addr = typeof addressJson === 'string' ? JSON.parse(addressJson) : addressJson;
+        if (addr && (addr.street != null || addr.city != null || addr.state != null || addr.zip != null)) {
+          if (addr.street != null) streetEl.value = addr.street;
+          if (addr.city != null) cityEl.value = addr.city;
+          if (addr.state != null) stateEl.value = addr.state;
+          if (addr.zip != null) zipEl.value = addr.zip;
+        }
+      } catch (_) {
+        streetEl.value = typeof addressJson === 'string' ? addressJson : '';
+      }
+    }
+
+    function saveAddressToLocal(street, city, state, zip) {
+      try {
+        localStorage.setItem('cokeShippingAddress', JSON.stringify({ street, city, state, zip }));
+      } catch (_) {}
+    }
+
+    document.getElementById('checkoutBtn').addEventListener('click', async () => {
+      await loadSavedAddress();
+      const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+      document.getElementById('checkoutStepAddress').classList.remove('d-none');
+      document.getElementById('checkoutStepDone').classList.add('d-none');
+      modal.show();
+    });
+
+    document.getElementById('checkoutConfirmBtn').addEventListener('click', async () => {
+      const street = (document.getElementById('checkoutStreet').value || '').trim();
+      const city = (document.getElementById('checkoutCity').value || '').trim();
+      const state = (document.getElementById('checkoutState').value || '').trim();
+      const zip = (document.getElementById('checkoutZip').value || '').trim();
+      if (!street || !city || !state || !zip) {
+        alert('Please fill in street, city, state, and ZIP.');
+        return;
+      }
+      saveAddressToLocal(street, city, state, zip);
+      const address = JSON.stringify({ street, city, state, zip });
+      const btn = document.getElementById('checkoutConfirmBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        const res = await apiFetch('/api/users/me', {
+          method: 'PATCH',
+          body: JSON.stringify({ address })
+        });
+        if (res && !res.ok) {
+          const err = await res.json().catch(() => ({}));
+          console.warn('Address save failed:', err.message || res.status);
+        }
+      } catch (e) {
+        console.warn('Address save error:', e);
+      }
+      bootstrap.Modal.getInstance(document.getElementById('checkoutModal'))?.hide();
+      document.getElementById('checkoutSuccess').classList.remove('d-none');
+      document.getElementById('cartList').innerHTML = '';
+      document.getElementById('cartEmpty').classList.add('d-none');
+      document.getElementById('checkoutSection').classList.add('d-none');
+      setCart([]);
+      btn.disabled = false;
+      btn.textContent = 'Save address & confirm order';
+      setTimeout(function () {
+        window.location.href = 'index.html';
+      }, 2500);
+    });
+
+    loadSavedAddress();
+    renderCart();
+  </script>
+</body>
+</html>

@@ -46,3 +46,30 @@ function setActivePage() {
     a.classList.toggle('active', href === page);
   });
 }
+
+const CART_KEY = 'cokeRewardsCart';
+
+function getCart() {
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function addToCart(item) {
+  const cart = getCart();
+  cart.push({
+    id: Date.now() + '-' + Math.random().toString(36).slice(2),
+    rewardName: item.rewardName,
+    points: item.points,
+    addedAt: new Date().toISOString()
+  });
+  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  return cart;
+}
+
+function setCart(items) {
+  localStorage.setItem(CART_KEY, JSON.stringify(items));
+}

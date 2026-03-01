@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using api.Data;
 using System.Security.Claims;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace api.Controllers;
 
@@ -105,20 +106,43 @@ public class UsersController : ControllerBase
         conn.Open();
 
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT id, email, name, total_points, created_at FROM users WHERE id = $userId";
+        cmd.CommandText = "SELECT id, email, name, total_points, created_at, address FROM users WHERE id = $userId";
         cmd.Parameters.AddWithValue("$userId", userId);
 
         using var reader = cmd.ExecuteReader();
         if (!reader.Read()) return NotFound(new { message = "User not found" });
 
+        var address = reader.FieldCount > 5 && !reader.IsDBNull(5) ? reader.GetString(5) : null;
         return Ok(new
         {
             id = reader.GetInt32(0),
             email = reader.GetString(1),
             name = reader.GetString(2),
             totalPoints = reader.GetInt32(3),
-            createdAt = reader.GetString(4)
+            createdAt = reader.GetString(4),
+            address
         });
+    }
+
+    [HttpPatch("me")]
+    public IActionResult UpdateMe([FromBody] UpdateMeRequest request)
+    {
+        if (request == null) return BadRequest(new { message = "Body required." });
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
+        using var conn = _db.Connect();
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE users SET address = $address WHERE id = $userId";
+        cmd.Parameters.AddWithValue("$address", (object?)request.Address ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$userId", userId);
+        cmd.ExecuteNonQuery();
+        return Ok(new { message = "Address saved.", address = request.Address });
+    }
+
+    public class UpdateMeRequest
+    {
+        [JsonPropertyName("address")]
+        public string? Address { get; set; }
     }
 
     [HttpGet("history")]

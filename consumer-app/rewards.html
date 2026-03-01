@@ -150,17 +150,47 @@
     .modal-redeem .btn-outline-secondary { border-radius: 10px; font-weight: 700; }
     .modal-redeem .btn-confirm-redeem { background: linear-gradient(135deg, var(--coke-red), var(--coke-red-dark)); color: white; border: none; border-radius: 10px; font-weight: 700; }
     .modal-redeem .btn-confirm-redeem:hover { color: white; opacity: 0.95; }
+    /* Cart button */
+    .btn-cart {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: white;
+      border: 1px solid rgba(244,0,9,0.2);
+      color: var(--coke-gray);
+      font-weight: 700;
+      font-size: 0.9rem;
+      padding: 0.5rem 0.85rem;
+      border-radius: 14px;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(244,0,9,0.08);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .btn-cart:hover { color: var(--coke-red); box-shadow: 0 4px 12px rgba(244,0,9,0.15); }
+    .btn-cart .cart-badge {
+      background: linear-gradient(135deg, var(--coke-red), var(--coke-red-dark));
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+    }
   </style>
 </head>
 <body>
   <div class="container-fluid px-4 py-3">
-    <div class="d-flex align-items-center mb-4">
-      <a href="index.html" class="text-dark me-3">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-          <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
-        </svg>
+    <div class="d-flex align-items-center justify-content-between mb-4">
+      <div class="d-flex align-items-center">
+        <a href="index.html" class="text-dark me-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+          </svg>
+        </a>
+        <h5 class="fw-bold mb-0" style="color: var(--coke-gray);">Coca-Cola Merch</h5>
+      </div>
+      <a href="cart.html" class="btn-cart" id="cartBtn">
+        Cart <span class="cart-badge" id="cartCount">0</span>
       </a>
-      <h5 class="fw-bold mb-0" style="color: var(--coke-gray);">Coca-Cola Merch</h5>
     </div>
 
     <!-- BALANCE -->
@@ -469,6 +499,8 @@
         });
         const data = res ? await res.json().catch(() => ({})) : {};
         if (res && res.ok) {
+          addToCart({ rewardName: REWARD_NAMES[rewardId] || rewardId, points });
+          renderCart();
           bootstrap.Modal.getInstance(document.getElementById('redeemConfirmModal'))?.hide();
           document.getElementById('redeemAlertMsg').textContent = data.message || `You redeemed ${REWARD_NAMES[rewardId] || rewardId}!`;
           document.getElementById('redeemAlert').classList.remove('d-none');
@@ -495,6 +527,12 @@
 
     document.getElementById('redeemConfirmYes').addEventListener('click', doConfirmRedeem);
 
+    function renderCart() {
+      const cart = getCart();
+      document.getElementById('cartCount').textContent = cart.length;
+    }
+
+    renderCart();
     loadData();
   </script>
 </body>

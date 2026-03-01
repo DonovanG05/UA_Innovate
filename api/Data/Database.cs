@@ -132,6 +132,7 @@ public class Database
         // Migrations for existing databases (SQLite ignores errors on duplicate columns)
         RunMigration(conn, "ALTER TABLE users ADD COLUMN age INTEGER");
         RunMigration(conn, "ALTER TABLE users ADD COLUMN zip_code TEXT");
+        RunMigration(conn, "ALTER TABLE users ADD COLUMN address TEXT");
         RunMigration(conn, "ALTER TABLE rvm_scans ADD COLUMN material_type TEXT");
         RunMigration(conn, "ALTER TABLE rvm_scans ADD COLUMN brand TEXT");
     }
