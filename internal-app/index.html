@@ -179,13 +179,7 @@
       const res = await apiFetch('/api/areas');
       if (!res) return;
       const areas = await res.json();
-      const query = document.getElementById('queryArea');
-      areas.forEach(a => {
-        const opt = document.createElement('option');
-        opt.value = a.id;
-        opt.textContent = a.name;
-        query.appendChild(opt);
-      });
+      populateAreaSelectWithGroups(document.getElementById('queryArea'), areas);
     }
 
     async function load() {

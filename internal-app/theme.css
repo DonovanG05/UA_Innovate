@@ -61,6 +61,15 @@ a.text-decoration-none.fw-semibold[href*="ai-insights"] {
   color: var(--client-red) !important;
 }
 
+optgroup {
+  font-weight: 700;
+  color: var(--client-black);
+}
+optgroup option {
+  font-weight: normal;
+  padding-left: 0.5rem;
+}
+
 .card,
 .kpi-card {
   border: 3px solid var(--client-red) !important;

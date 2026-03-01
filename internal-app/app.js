@@ -42,3 +42,39 @@ function setActivePage() {
     a.classList.toggle('active', a.getAttribute('href') === page);
   });
 }
+
+/** Populate an area <select> with optgroups by type (Countries, States/Provinces, Cities). */
+function populateAreaSelectWithGroups(select, areas, placeholder = 'Choose an area...') {
+  const typeOrder = ['country', 'state', 'city'];
+  const typeLabels = { country: 'Countries', state: 'States / Provinces', city: 'Cities' };
+  select.innerHTML = '';
+  const first = document.createElement('option');
+  first.value = '';
+  first.textContent = placeholder;
+  select.appendChild(first);
+  typeOrder.forEach(type => {
+    const group = areas.filter(a => a.type === type);
+    if (group.length === 0) return;
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = typeLabels[type] || type;
+    group.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.name;
+      optgroup.appendChild(opt);
+    });
+    select.appendChild(optgroup);
+  });
+  const other = areas.filter(a => !typeOrder.includes(a.type));
+  if (other.length) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = 'Other';
+    other.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.name;
+      optgroup.appendChild(opt);
+    });
+    select.appendChild(optgroup);
+  }
+}

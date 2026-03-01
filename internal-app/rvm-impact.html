@@ -198,13 +198,9 @@
 
     async function loadAreas() {
       const res = await apiFetch('/api/areas?type=city');
+      if (!res) return;
       const areas = await res.json();
-      areas.forEach(a => {
-        const opt = document.createElement('option');
-        opt.value = a.id;
-        opt.textContent = a.name;
-        areaSelect.appendChild(opt);
-      });
+      populateAreaSelectWithGroups(areaSelect, areas);
     }
 
     async function updateImpact() {

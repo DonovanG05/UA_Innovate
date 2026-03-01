@@ -102,17 +102,10 @@
 
     async function loadAreas() {
       const res = await apiFetch('/api/areas');
+      if (!res) return;
       const areas = await res.json();
-      const filter = document.getElementById('areaFilter');
-      const query = document.getElementById('queryArea');
-      
-      areas.forEach(a => {
-        const opt = document.createElement('option');
-        opt.value = a.id;
-        opt.textContent = a.name;
-        filter.appendChild(opt.cloneNode(true));
-        query.appendChild(opt);
-      });
+      populateAreaSelectWithGroups(document.getElementById('areaFilter'), areas);
+      populateAreaSelectWithGroups(document.getElementById('queryArea'), areas);
     }
 
     async function loadInsights() {
