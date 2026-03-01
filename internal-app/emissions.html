@@ -6,18 +6,25 @@
   <title>Emissions — Coca-Cola Sustainability</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link href="theme.css" rel="stylesheet">
   <style>
-    body { background: #f0f2f5; }
-    .navbar-brand span { color: #F40009; }
     #map { height: 420px; border-radius: 8px; }
     .table th { white-space: nowrap; }
+    .chart-scroll { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+    .chart-scroll > div { min-width: 800px; height: 320px; }
     .grade-badge-a { background:#198754; color:#fff; }
     .grade-badge-b { background:#ffc107; color:#000; }
     .grade-badge-c { background:#dc3545; color:#fff; }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { background: #e9ecef !important; }
+    th .sort-icon { margin-left: 6px; font-size: 1.15em; line-height: 1; }
+    th.sortable .sort-icon::after { content: ' ↕'; opacity: 1; }
+    th.sorted-asc .sort-icon::after { content: ' ▲'; opacity: 1; }
+    th.sorted-desc .sort-icon::after { content: ' ▼'; opacity: 1; }
   </style>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark" style="background:#1a1a2e">
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-internal">
     <div class="container-fluid">
       <a class="navbar-brand fw-bold" href="index.html"><span>●</span> Coca-Cola Sustainability</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
@@ -64,8 +71,10 @@
     <!-- BAR CHART -->
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-header bg-white fw-semibold">Top Areas by Raw Emissions (MTCO₂e)</div>
-      <div class="card-body">
-        <canvas id="chart" height="90"></canvas>
+      <div class="card-body p-0">
+        <div class="chart-scroll">
+          <div><canvas id="chart"></canvas></div>
+        </div>
       </div>
     </div>
 
@@ -84,18 +93,25 @@
             <thead class="table-light">
               <tr>
                 <th>#</th>
-                <th>Area</th>
-                <th>Grade</th>
-                <th>Trucking</th>
-                <th>Factory</th>
-                <th>Total</th>
-                <th>Energy</th>
-                <th>RVMs</th>
-                <th>Final Score</th>
+                <th class="sortable" data-sort="area" onclick="sortEmissionsBy('area')">Area <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="grade" onclick="sortEmissionsBy('grade')">Grade <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="trucking" onclick="sortEmissionsBy('trucking')">Trucking <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="factory" onclick="sortEmissionsBy('factory')">Factory <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="total" onclick="sortEmissionsBy('total')">Total <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="energy" onclick="sortEmissionsBy('energy')">Energy <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="rvms" onclick="sortEmissionsBy('rvms')">RVMs <span class="sort-icon"></span></th>
+                <th class="sortable" data-sort="finalScore" onclick="sortEmissionsBy('finalScore')">Final Score <span class="sort-icon"></span></th>
               </tr>
             </thead>
             <tbody id="tableBody"></tbody>
           </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top bg-light">
+          <span class="small text-muted" id="pageInfo">Page 1 of 1</span>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary" id="prevPage" onclick="goToPage(currentPage - 1)" disabled>Previous</button>
+            <button class="btn btn-outline-secondary" id="nextPage" onclick="goToPage(currentPage + 1)">Next</button>
+          </div>
         </div>
       </div>
     </div>
@@ -117,8 +133,83 @@
     let markers = [];
     let chart = null;
     let currentType = 'state';
+    let emissionsData = [];
+    let currentPage = 1;
+    const PAGE_SIZE = 10;
+    let emissionsSortCol = null;
+    let emissionsSortDir = 1;
+
+    const GRADE_ORDER = { A: 1, B: 2, C: 3 };
+
+    function getEmissionsSortKey(a, key) {
+      const total = (a.trucking || 0) + (a.factory || 0);
+      switch (key) {
+        case 'area': return (a.name || '').toLowerCase();
+        case 'grade': return GRADE_ORDER[a.grade] ?? 0;
+        case 'trucking': return a.trucking ?? 0;
+        case 'factory': return a.factory ?? 0;
+        case 'total': return total;
+        case 'energy': return a.energy ?? 0;
+        case 'rvms': return a.rvmCount ?? 0;
+        case 'finalScore': return a.finalScore ?? 0;
+        default: return '';
+      }
+    }
+
+    function sortEmissionsBy(key) {
+      if (emissionsSortCol === key) emissionsSortDir *= -1;
+      else { emissionsSortCol = key; emissionsSortDir = 1; }
+      document.getElementById('tableBody').closest('table').querySelectorAll('thead th.sortable').forEach(th => {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+        if (th.dataset.sort === key) th.classList.add(emissionsSortDir === 1 ? 'sorted-asc' : 'sorted-desc');
+      });
+      emissionsData.sort((a, b) => {
+        const va = getEmissionsSortKey(a, key);
+        const vb = getEmissionsSortKey(b, key);
+        if (va < vb) return -1 * emissionsSortDir;
+        if (va > vb) return 1 * emissionsSortDir;
+        return 0;
+      });
+      currentPage = 1;
+      renderTablePage();
+    }
 
     function clearMarkers() { markers.forEach(m => map.removeLayer(m)); markers = []; }
+
+    function goToPage(page) {
+      const totalPages = Math.ceil(emissionsData.length / PAGE_SIZE) || 1;
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      renderTablePage();
+    }
+
+    function renderTablePage() {
+      const totalPages = Math.ceil(emissionsData.length / PAGE_SIZE) || 1;
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageData = emissionsData.slice(start, start + PAGE_SIZE);
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = pageData.map((a, i) => {
+        const total = (a.trucking || 0) + (a.factory || 0);
+        const rowNum = start + i + 1;
+        return `
+        <tr>
+          <td class="text-muted">${rowNum}</td>
+          <td class="fw-semibold">${a.name}</td>
+          <td>${gradeBadge(a.grade)}</td>
+          <td>${fmt(a.trucking)}</td>
+          <td>${fmt(a.factory)}</td>
+          <td><strong>${fmt(total)}</strong></td>
+          <td>${fmt(a.energy)}</td>
+          <td>${a.rvmCount}</td>
+          <td>${fmt(a.finalScore)}</td>
+        </tr>
+      `}).join('');
+
+      document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+      document.getElementById('prevPage').disabled = currentPage <= 1;
+      document.getElementById('nextPage').disabled = currentPage >= totalPages;
+    }
 
     async function load(type) {
       currentType = type;
@@ -132,6 +223,21 @@
       if (!res) return;
       const data = await res.json();
 
+      emissionsData = data;
+      currentPage = 1;
+      if (emissionsSortCol) {
+        emissionsData = [...data].sort((a, b) => {
+          const va = getEmissionsSortKey(a, emissionsSortCol);
+          const vb = getEmissionsSortKey(b, emissionsSortCol);
+          if (va < vb) return -1 * emissionsSortDir;
+          if (va > vb) return 1 * emissionsSortDir;
+          return 0;
+        });
+        document.getElementById('tableBody').closest('table').querySelectorAll('thead th.sortable').forEach(th => {
+          th.classList.remove('sorted-asc', 'sorted-desc');
+          if (th.dataset.sort === emissionsSortCol) th.classList.add(emissionsSortDir === 1 ? 'sorted-asc' : 'sorted-desc');
+        });
+      }
       document.getElementById('areaCount').textContent = data.length + ' areas';
 
       // Map markers
@@ -158,13 +264,15 @@
         markers.push(m);
       });
 
-      // Bar chart (top 20)
-      const top20 = data.slice(0, 20);
-      const labels = top20.map(a => a.name);
-      const values = top20.map(a => a.rawScore);
-      const colors = top20.map(a => a.grade === 'A' ? '#198754' : a.grade === 'B' ? '#ffc107' : '#dc3545');
+      // Bar chart (all areas, scrollable)
+      const labels = data.map(a => a.name);
+      const values = data.map(a => a.rawScore);
+      const colors = data.map(a => a.grade === 'A' ? '#198754' : a.grade === 'B' ? '#ffc107' : '#dc3545');
+      const minChartWidth = Math.max(800, labels.length * 36);
 
       if (chart) chart.destroy();
+      const chartWrap = document.querySelector('.chart-scroll > div');
+      chartWrap.style.minWidth = minChartWidth + 'px';
       chart = new Chart(document.getElementById('chart'), {
         type: 'bar',
         data: {
@@ -178,6 +286,7 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
             y: { beginAtZero: true, ticks: { callback: v => fmt(v) } },
@@ -186,23 +295,7 @@
         }
       });
 
-      // Table
-      const tbody = document.getElementById('tableBody');
-      tbody.innerHTML = data.map((a, i) => {
-        const total = (a.trucking || 0) + (a.factory || 0);
-        return `
-        <tr>
-          <td class="text-muted">${i + 1}</td>
-          <td class="fw-semibold">${a.name}</td>
-          <td>${gradeBadge(a.grade)}</td>
-          <td>${fmt(a.trucking)}</td>
-          <td>${fmt(a.factory)}</td>
-          <td><strong>${fmt(total)}</strong></td>
-          <td>${fmt(a.energy)}</td>
-          <td>${a.rvmCount}</td>
-          <td>${fmt(a.finalScore)}</td>
-        </tr>
-      `}).join('');
+      renderTablePage();
     }
 
     async function exportCsv() {

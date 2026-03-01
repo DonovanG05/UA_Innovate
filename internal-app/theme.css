@@ -1,0 +1,68 @@
+/* Client theme: black + #F40009 */
+:root {
+  --client-black: #000;
+  --client-red: #F40009;
+}
+
+body {
+  background: #f0f2f5;
+}
+
+.navbar-internal {
+  background: var(--client-black) !important;
+}
+
+.navbar-brand span {
+  color: var(--client-red);
+}
+
+.btn-danger,
+.btn-danger:hover,
+.btn-danger:focus {
+  background-color: var(--client-red);
+  border-color: var(--client-red);
+}
+
+.btn-outline-danger {
+  color: var(--client-red);
+  border-color: var(--client-red);
+}
+
+.btn-outline-danger:hover,
+.btn-outline-danger:focus {
+  background-color: var(--client-red);
+  color: #fff;
+  border-color: var(--client-red);
+}
+
+.text-danger {
+  color: var(--client-red) !important;
+}
+
+.msg-user {
+  background: var(--client-black) !important;
+}
+
+a.text-danger,
+a.text-decoration-none.fw-semibold[href*="ai-insights"] {
+  color: var(--client-red) !important;
+}
+
+.border-danger,
+.ai-suggestion-card {
+  border-left-color: var(--client-red) !important;
+}
+
+.badge.bg-danger {
+  background-color: var(--client-red) !important;
+}
+
+.spinner-border.text-danger {
+  color: var(--client-red) !important;
+}
+
+.card,
+.kpi-card {
+  border: 3px solid var(--client-red) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
