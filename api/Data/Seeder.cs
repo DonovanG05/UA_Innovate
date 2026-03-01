@@ -24,6 +24,7 @@ public static class Seeder
             scanCheck.CommandText = "SELECT COUNT(*) FROM rvm_scans";
             if ((long)scanCheck.ExecuteScalar()! == 0)
                 InsertMockScans(conn);
+            ImportMissingDataForExistingUsers(conn);
             return;
         }
 
@@ -420,6 +421,151 @@ public static class Seeder
             scanCmd.Parameters.AddWithValue("$material", material);
             scanCmd.Parameters.AddWithValue("$brand", brand);
             scanCmd.ExecuteNonQuery();
+        }
+    }
+
+    private static void ImportMissingDataForExistingUsers(SqliteConnection conn)
+    {
+        var userIds = new List<int>();
+        var userNames = new List<string>();
+        using (var uCmd = conn.CreateCommand())
+        {
+            uCmd.CommandText = "SELECT id, name FROM users";
+            using var ur = uCmd.ExecuteReader();
+            while (ur.Read())
+            {
+                userIds.Add(ur.GetInt32(0));
+                userNames.Add(ur.GetString(1));
+            }
+        }
+        if (userIds.Count == 0) return;
+
+        var rvmIds = new List<int>();
+        using (var rCmd = conn.CreateCommand())
+        {
+            rCmd.CommandText = "SELECT id FROM rvm_machines";
+            using var rr = rCmd.ExecuteReader();
+            while (rr.Read()) rvmIds.Add(rr.GetInt32(0));
+        }
+        if (rvmIds.Count == 0) return;
+
+        var rng = new Random(12345);
+        var brands = new[] { "Sprite", "Coke", "Diet Coke", "Coke Zero" };
+        var materials = new[] { "plastic", "aluminum" };
+        var zips = new[] { "30301", "90210", "35203", "60601", "77001", "10001", "33101", "75201", "85001", "19101" };
+        var baseDate = DateTime.UtcNow.AddMonths(-6);
+
+        foreach (var userId in userIds)
+        {
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                var updCmd = conn.CreateCommand();
+                updCmd.CommandText = "SELECT qr_identifier, zip_code FROM users WHERE id = $id";
+                updCmd.Parameters.AddWithValue("$id", userId);
+                string? qr = null;
+                string? zip = null;
+                using (var r = updCmd.ExecuteReader())
+                {
+                    if (r.Read())
+                    {
+                        qr = r.IsDBNull(0) ? null : r.GetString(0);
+                        zip = r.IsDBNull(1) ? null : r.GetString(1);
+                    }
+                }
+                if (string.IsNullOrWhiteSpace(qr))
+                {
+                    var setQr = conn.CreateCommand();
+                    setQr.CommandText = "UPDATE users SET qr_identifier = $v WHERE id = $id";
+                    setQr.Parameters.AddWithValue("$v", "USER-" + userId + "-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant());
+                    setQr.Parameters.AddWithValue("$id", userId);
+                    setQr.ExecuteNonQuery();
+                }
+                if (string.IsNullOrWhiteSpace(zip))
+                {
+                    var setZip = conn.CreateCommand();
+                    setZip.CommandText = "UPDATE users SET zip_code = $v WHERE id = $id";
+                    setZip.Parameters.AddWithValue("$v", zips[rng.Next(zips.Length)]);
+                    setZip.Parameters.AddWithValue("$id", userId);
+                    setZip.ExecuteNonQuery();
+                }
+
+                var countScans = conn.CreateCommand();
+                countScans.CommandText = "SELECT COUNT(*) FROM rvm_scans WHERE user_id = $uid";
+                countScans.Parameters.AddWithValue("$uid", userId);
+                var existingScans = (long)countScans.ExecuteScalar()!;
+                int toAdd = existingScans == 0 ? rng.Next(10, 41) : 0;
+                int pointsAdded = 0;
+                for (int i = 0; i < toAdd; i++)
+                {
+                    int rvmId = rvmIds[rng.Next(rvmIds.Count)];
+                    int pts = rng.Next(2) == 0 ? 1 : 2;
+                    var scannedAt = baseDate.AddDays(rng.Next(180)).AddMinutes(rng.Next(1440)).ToString("yyyy-MM-dd HH:mm:ss");
+                    var insScan = conn.CreateCommand();
+                    insScan.CommandText = """
+                        INSERT INTO rvm_scans (rvm_id, user_id, product_barcode, scanned_at, points_awarded, material_type, brand)
+                        VALUES ($rvmId, $userId, $barcode, $scannedAt, $pts, $material, $brand)
+                    """;
+                    insScan.Parameters.AddWithValue("$rvmId", rvmId);
+                    insScan.Parameters.AddWithValue("$userId", userId);
+                    insScan.Parameters.AddWithValue("$barcode", "IMP" + rng.Next(100000, 999999));
+                    insScan.Parameters.AddWithValue("$scannedAt", scannedAt);
+                    insScan.Parameters.AddWithValue("$pts", pts);
+                    insScan.Parameters.AddWithValue("$material", materials[rng.Next(materials.Length)]);
+                    insScan.Parameters.AddWithValue("$brand", brands[rng.Next(brands.Length)]);
+                    insScan.ExecuteNonQuery();
+
+                    var insReward = conn.CreateCommand();
+                    insReward.CommandText = """
+                        INSERT INTO user_rewards (user_id, type, points, description, created_at)
+                        VALUES ($userId, 'earn', $pts, 'RVM Bottle Scan', $scannedAt)
+                    """;
+                    insReward.Parameters.AddWithValue("$userId", userId);
+                    insReward.Parameters.AddWithValue("$pts", pts);
+                    insReward.Parameters.AddWithValue("$scannedAt", scannedAt);
+                    insReward.ExecuteNonQuery();
+                    pointsAdded += pts;
+                }
+                if (pointsAdded > 0)
+                {
+                    var updPoints = conn.CreateCommand();
+                    updPoints.CommandText = "UPDATE users SET total_points = total_points + $pts WHERE id = $id";
+                    updPoints.Parameters.AddWithValue("$pts", pointsAdded);
+                    updPoints.Parameters.AddWithValue("$id", userId);
+                    updPoints.ExecuteNonQuery();
+                }
+                tx.Commit();
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
+        }
+
+        var jykiaIdx = userNames.FindIndex(n => n.Contains("Jykia", StringComparison.OrdinalIgnoreCase));
+        if (jykiaIdx >= 0)
+        {
+            int jykiaId = userIds[jykiaIdx];
+            var alreadyBonus = conn.CreateCommand();
+            alreadyBonus.CommandText = "SELECT COUNT(*) FROM user_rewards WHERE user_id = $id AND description = 'Bonus points' AND points = 100";
+            alreadyBonus.Parameters.AddWithValue("$id", jykiaId);
+            if ((long)alreadyBonus.ExecuteScalar()! == 0)
+            {
+                var add100 = conn.CreateCommand();
+                add100.CommandText = "UPDATE users SET total_points = total_points + 100 WHERE id = $id";
+                add100.Parameters.AddWithValue("$id", jykiaId);
+                add100.ExecuteNonQuery();
+                var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                var insBonus = conn.CreateCommand();
+                insBonus.CommandText = """
+                    INSERT INTO user_rewards (user_id, type, points, description, created_at)
+                    VALUES ($userId, 'earn', 100, 'Bonus points', $now)
+                """;
+                insBonus.Parameters.AddWithValue("$userId", jykiaId);
+                insBonus.Parameters.AddWithValue("$now", now);
+                insBonus.ExecuteNonQuery();
+            }
         }
     }
 

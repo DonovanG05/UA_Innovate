@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using api.Data;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace api.Controllers;
 
@@ -11,10 +12,12 @@ namespace api.Controllers;
 public class RvmController : ControllerBase
 {
     private readonly Database _db;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public RvmController(Database db)
+    public RvmController(Database db, IHttpClientFactory httpClientFactory)
     {
         _db = db;
+        _httpClientFactory = httpClientFactory;
     }
 
     [HttpGet]
@@ -48,6 +51,101 @@ public class RvmController : ControllerBase
         }
 
         return Ok(rvms);
+    }
+
+    [HttpGet("nearest")]
+    [Authorize]
+    public async Task<IActionResult> GetNearestRvm()
+    {
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int userId))
+            return Unauthorized();
+
+        string? zipCode = null;
+        using (var conn = _db.Connect())
+        {
+            conn.Open();
+            var userCmd = conn.CreateCommand();
+            userCmd.CommandText = "SELECT zip_code FROM users WHERE id = $userId";
+            userCmd.Parameters.AddWithValue("$userId", userId);
+            var z = userCmd.ExecuteScalar();
+            if (z != null && z != DBNull.Value) zipCode = z.ToString()?.Trim();
+        }
+
+        if (string.IsNullOrEmpty(zipCode))
+        {
+            using var conn = _db.Connect();
+            conn.Open();
+            var firstCmd = conn.CreateCommand();
+            firstCmd.CommandText = "SELECT id, location_name, latitude, longitude FROM rvm_machines WHERE active = 1 ORDER BY id LIMIT 1";
+            using var r = firstCmd.ExecuteReader();
+            if (r.Read())
+                return Ok(new { locationName = r.GetString(1), distanceMi = (double?)null, message = "Set your zip code in profile to see distance." });
+            return Ok(new { message = "No RVMs found. Set your zip code in profile." });
+        }
+
+        double userLat, userLon;
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(5);
+            var res = await client.GetAsync($"https://api.zippopotam.us/us/{zipCode}");
+            if (!res.IsSuccessStatusCode) throw new Exception("Geocode failed");
+            var json = await res.Content.ReadAsStringAsync();
+            var doc = JsonDocument.Parse(json);
+            var places = doc.RootElement.GetProperty("places");
+            if (places.GetArrayLength() == 0) throw new Exception("No place");
+            var place = places[0];
+            userLat = place.GetProperty("latitude").GetDouble();
+            userLon = place.GetProperty("longitude").GetDouble();
+        }
+        catch
+        {
+            using var conn = _db.Connect();
+            conn.Open();
+            var firstCmd = conn.CreateCommand();
+            firstCmd.CommandText = "SELECT id, location_name, latitude, longitude FROM rvm_machines WHERE active = 1 ORDER BY id LIMIT 1";
+            using var r = firstCmd.ExecuteReader();
+            if (r.Read())
+                return Ok(new { locationName = r.GetString(1), distanceMi = (double?)null, message = "Using your zip. Distance unavailable." });
+            return Ok(new { message = "No RVMs found." });
+        }
+
+        var rvms = new List<(int id, string name, double lat, double lon)>();
+        using (var conn = _db.Connect())
+        {
+            conn.Open();
+            var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT id, location_name, latitude, longitude FROM rvm_machines WHERE active = 1";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                rvms.Add((reader.GetInt32(0), reader.GetString(1), reader.GetDouble(2), reader.GetDouble(3)));
+        }
+
+        if (rvms.Count == 0)
+            return Ok(new { message = "No RVMs found." });
+
+        double minDist = double.MaxValue;
+        string? nearestName = null;
+        int nearestId = 0;
+        foreach (var r in rvms)
+        {
+            var d = HaversineMi(userLat, userLon, r.lat, r.lon);
+            if (d < minDist) { minDist = d; nearestName = r.name; nearestId = r.id; }
+        }
+
+        return Ok(new { id = nearestId, locationName = nearestName, distanceMi = Math.Round(minDist, 1), zipCode });
+    }
+
+    private static double HaversineMi(double lat1, double lon1, double lat2, double lon2)
+    {
+        const double R = 3959; // Earth radius miles
+        var dLat = (lat2 - lat1) * Math.PI / 180;
+        var dLon = (lon2 - lon1) * Math.PI / 180;
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return R * c;
     }
 
     [HttpGet("scans/stats")]

@@ -100,6 +100,33 @@ public class UsersController : ControllerBase
         return Ok(users);
     }
 
+    [HttpGet("leaderboard")]
+    public IActionResult GetLeaderboard()
+    {
+        using var conn = _db.Connect();
+        conn.Open();
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT u.name, COALESCE(COUNT(s.id), 0) AS bottle_count
+            FROM users u
+            LEFT JOIN rvm_scans s ON s.user_id = u.id
+            GROUP BY u.id, u.name
+            ORDER BY bottle_count DESC, u.name ASC
+            LIMIT 50
+            """;
+        var list = new List<object>();
+        using var reader = cmd.ExecuteReader();
+        var rank = 1;
+        while (reader.Read())
+        {
+            var name = reader.GetString(0);
+            var bottleCount = reader.GetInt32(1);
+            var firstName = name.Split(' ')[0];
+            list.Add(new { rank = rank++, firstName, scanCount = bottleCount });
+        }
+        return Ok(list);
+    }
+
     [HttpGet("me")]
     public IActionResult GetMe()
     {
@@ -108,7 +135,7 @@ public class UsersController : ControllerBase
         conn.Open();
 
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT id, email, name, total_points, created_at, address, qr_identifier, gender FROM users WHERE id = $userId";
+        cmd.CommandText = "SELECT id, email, name, total_points, created_at, address, qr_identifier, gender, zip_code FROM users WHERE id = $userId";
         cmd.Parameters.AddWithValue("$userId", userId);
 
         using var reader = cmd.ExecuteReader();
@@ -122,6 +149,7 @@ public class UsersController : ControllerBase
         var address = reader.FieldCount > 5 && !reader.IsDBNull(5) ? reader.GetString(5) : null;
         var qrIdentifier = reader.FieldCount > 6 && !reader.IsDBNull(6) ? reader.GetString(6) : null;
         var gender = reader.FieldCount > 7 && !reader.IsDBNull(7) ? reader.GetString(7) : null;
+        var zipCode = reader.FieldCount > 8 && !reader.IsDBNull(8) ? reader.GetString(8) : null;
         reader.Close();
 
         if (string.IsNullOrEmpty(qrIdentifier))
@@ -143,7 +171,8 @@ public class UsersController : ControllerBase
             createdAt,
             address,
             qrIdentifier,
-            gender
+            gender,
+            zipCode
         });
     }
 
@@ -155,12 +184,13 @@ public class UsersController : ControllerBase
         using var conn = _db.Connect();
         conn.Open();
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "UPDATE users SET address = $address, gender = $gender WHERE id = $userId";
+        cmd.CommandText = "UPDATE users SET address = $address, gender = $gender, zip_code = $zipCode WHERE id = $userId";
         cmd.Parameters.AddWithValue("$address", (object?)request.Address ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$gender", (object?)request.Gender ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$zipCode", (object?)request.ZipCode ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$userId", userId);
         cmd.ExecuteNonQuery();
-        return Ok(new { message = "Profile saved.", address = request.Address, gender = request.Gender });
+        return Ok(new { message = "Profile saved.", address = request.Address, gender = request.Gender, zipCode = request.ZipCode });
     }
 
     public class UpdateMeRequest
@@ -169,6 +199,8 @@ public class UsersController : ControllerBase
         public string? Address { get; set; }
         [JsonPropertyName("gender")]
         public string? Gender { get; set; }
+        [JsonPropertyName("zipCode")]
+        public string? ZipCode { get; set; }
     }
 
     [HttpGet("history")]

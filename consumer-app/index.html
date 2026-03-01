@@ -86,6 +86,12 @@
       border: 1px solid rgba(244,0,9,0.15);
     }
     .next-reward { font-size: 0.8rem; opacity: 0.95; }
+    .leaderboard-card { border-radius: 16px; overflow: hidden; }
+    .leaderboard-row { display: flex; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid rgba(244,0,9,0.08); }
+    .leaderboard-row:last-child { border-bottom: none; }
+    .leaderboard-rank { width: 2rem; font-weight: 800; font-size: 1rem; color: var(--coke-red); flex-shrink: 0; }
+    .leaderboard-name { flex: 1; font-weight: 700; color: var(--coke-gray); }
+    .leaderboard-scans { font-weight: 700; color: var(--coke-red); font-size: 0.9rem; }
   </style>
 </head>
 <body>
@@ -160,16 +166,16 @@
       </div>
     </div>
 
-    <!-- RECENT ACTIVITY -->
+    <!-- GLOBAL LEADERBOARD -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h6 class="fw-bold mb-0" style="color: var(--coke-gray);">Recent Activity</h6>
-      <a href="history.html" class="text-decoration-none x-small fw-bold" style="color: var(--coke-red);">View All</a>
+      <h6 class="fw-bold mb-0" style="color: var(--coke-gray);">Global Leaderboard</h6>
+      <span class="x-small text-muted">Most bottle submissions</span>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4" style="border-radius: 20px !important;">
-      <div id="activityList" class="list-group list-group-flush">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4 leaderboard-card" style="border-radius: 20px !important;">
+      <div id="leaderboardList" class="list-group list-group-flush">
         <div class="list-group-item py-4 text-center text-muted small">
-          No activity yet. Scan a bottle to get started!
+          Loading leaderboard…
         </div>
       </div>
     </div>
@@ -225,15 +231,14 @@
     setActivePage();
 
     async function loadData() {
-      const [uRes, hRes] = await Promise.all([
+      const [uRes, hRes, lbRes] = await Promise.all([
         apiFetch('/api/users/me'),
-        apiFetch('/api/users/history')
+        apiFetch('/api/users/history'),
+        apiFetch('/api/users/leaderboard')
       ]);
 
-      if (!uRes || !hRes) return;
+      if (!uRes) return;
       const user = await uRes.json();
-      const history = await hRes.json();
-
       document.getElementById('userName').textContent = user.name;
       document.getElementById('totalPoints').textContent = user.totalPoints;
 
@@ -249,19 +254,22 @@
         progressEl.style.width = '100%';
       }
 
-      const list = document.getElementById('activityList');
-      if (history.length > 0) {
-        list.innerHTML = history.slice(0, 3).map(h => `
-          <div class="list-group-item d-flex justify-content-between align-items-center py-3">
-            <div>
-              <p class="small fw-bold mb-0 text-dark">${h.description}</p>
-              <p class="x-small text-muted mb-0">${fmtDate(h.createdAt)}</p>
+      const list = document.getElementById('leaderboardList');
+      if (lbRes && lbRes.ok) {
+        const leaderboard = await lbRes.json();
+        if (leaderboard.length > 0) {
+          list.innerHTML = leaderboard.map(u => `
+            <div class="leaderboard-row">
+              <span class="leaderboard-rank">#${u.rank}</span>
+              <span class="leaderboard-name">${u.firstName}</span>
+              <span class="leaderboard-scans">${u.scanCount} bottles</span>
             </div>
-            <span class="badge ${h.type === 'earn' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'} rounded-pill">
-              ${h.type === 'earn' ? '+' : '-'}${h.points}
-            </span>
-          </div>
-        `).join('');
+          `).join('');
+        } else {
+          list.innerHTML = '<div class="list-group-item py-4 text-center text-muted small">No submissions yet. Be the first to scan!</div>';
+        }
+      } else {
+        list.innerHTML = '<div class="list-group-item py-4 text-center text-muted small">Could not load leaderboard.</div>';
       }
     }
 

@@ -30,6 +30,14 @@
       <p class="text-muted x-small mb-3">Hold this up to the machine to identify your account.</p>
       <div id="userQrCode" class="d-flex justify-content-center" style="min-height: 180px;"></div>
     </div>
+
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+      <h6 class="fw-bold mb-2" style="color: #4a4a4a;">Nearest RVM</h6>
+      <p class="text-muted small mb-3">Based on your saved zip code.</p>
+      <div id="nearestRvmContent">
+        <p class="text-muted mb-0">Loading…</p>
+      </div>
+    </div>
   </div>
 
   <!-- BOTTOM NAV -->
@@ -80,6 +88,22 @@
         qrEl.innerHTML = '';
         new QRCode(qrEl, { text: user.qrIdentifier, width: 200, height: 200, colorDark: '#000', colorLight: '#fff' });
       }
+    })();
+
+    (async function loadNearestRvm() {
+      const el = document.getElementById('nearestRvmContent');
+      if (!el) return;
+      const res = await apiFetch('/api/rvm/nearest');
+      if (!res) { el.innerHTML = '<p class="text-muted mb-0">Unable to load nearest RVM.</p>'; return; }
+      const data = await res.json();
+      if (data.message && !data.locationName) {
+        el.innerHTML = '<p class="text-muted mb-0">' + (data.message || 'No RVM found.') + '</p>';
+        return;
+      }
+      let html = '<p class="fw-semibold mb-1" style="color: #4a4a4a;">' + (data.locationName || '—') + '</p>';
+      if (data.distanceMi != null) html += '<p class="text-muted small mb-0">' + data.distanceMi + ' mi away</p>';
+      if (data.message) html += '<p class="text-muted x-small mt-2 mb-0">' + data.message + '</p>';
+      el.innerHTML = html;
     })();
   </script>
 </body>

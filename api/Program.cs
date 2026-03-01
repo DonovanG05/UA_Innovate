@@ -24,6 +24,7 @@ if (File.Exists(envPath))
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<api.Data.Database>();
+builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<api.Services.GeminiService>();
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>

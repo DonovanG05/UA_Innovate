@@ -297,7 +297,7 @@
       try {
         const res = await apiFetch('/api/users/me', {
           method: 'PATCH',
-          body: JSON.stringify({ address })
+          body: JSON.stringify({ address, zipCode: zip })
         });
         if (res && !res.ok) {
           const err = await res.json().catch(() => ({}));
