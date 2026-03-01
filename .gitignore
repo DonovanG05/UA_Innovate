@@ -1,0 +1,13 @@
+# API keys and secrets - NEVER commit these
+api/env/.env
+
+# SQLite database
+api/database.db
+
+# .NET build output
+api/bin/
+api/obj/
+
+# OS files
+.DS_Store
+Thumbs.db
