@@ -250,7 +250,7 @@
           <div class="reward-info">
             <div class="reward-name">Polar Bear</div>
             <span class="item-pts">8 pts</span>
-            <button class="btn btn-redeem" disabled>Coming soon</button>
+            <button class="btn btn-redeem" data-reward-id="polarbear" data-points="8" data-reward-name="Polar Bear" onclick="openRedeemConfirm('polarbear', 8, 'Polar Bear')" disabled>Redeem</button>
           </div>
         </div>
       </div>
@@ -280,7 +280,7 @@
           <div class="reward-info">
             <div class="reward-name">Mouse pad</div>
             <span class="item-pts">15 pts</span>
-            <button class="btn btn-redeem" disabled>Coming soon</button>
+            <button class="btn btn-redeem" data-reward-id="mousepad" data-points="15" data-reward-name="Mouse pad" onclick="openRedeemConfirm('mousepad', 15, 'Mouse pad')" disabled>Redeem</button>
           </div>
         </div>
       </div>
@@ -310,7 +310,7 @@
           <div class="reward-info">
             <div class="reward-name">Diet Coke Cap</div>
             <span class="item-pts">28 pts</span>
-            <button class="btn btn-redeem" disabled>Coming soon</button>
+            <button class="btn btn-redeem" data-reward-id="dietcokecap" data-points="28" data-reward-name="Diet Coke Cap" onclick="openRedeemConfirm('dietcokecap', 28, 'Diet Coke Cap')" disabled>Redeem</button>
           </div>
         </div>
       </div>
@@ -340,7 +340,7 @@
           <div class="reward-info">
             <div class="reward-name">Coca-Cola T-shirt</div>
             <span class="item-pts">35 pts</span>
-            <button class="btn btn-redeem" disabled>Coming soon</button>
+            <button class="btn btn-redeem" data-reward-id="tshirt" data-points="35" data-reward-name="Coca-Cola T-shirt" onclick="openRedeemConfirm('tshirt', 35, 'Coca-Cola T-shirt')" disabled>Redeem</button>
           </div>
         </div>
       </div>
@@ -360,7 +360,7 @@
           <div class="reward-info">
             <div class="reward-name">Pocket Watch</div>
             <span class="item-pts">45 pts</span>
-            <button class="btn btn-redeem" disabled>Coming soon</button>
+            <button class="btn btn-redeem" data-reward-id="pocketwatch" data-points="45" data-reward-name="Pocket Watch" onclick="openRedeemConfirm('pocketwatch', 45, 'Pocket Watch')" disabled>Redeem</button>
           </div>
         </div>
       </div>
@@ -380,7 +380,7 @@
           <div class="reward-info">
             <div class="reward-name">Coca-Cola Cooler</div>
             <span class="item-pts">120 pts</span>
-            <button class="btn btn-redeem" disabled>Coming soon</button>
+            <button class="btn btn-redeem" data-reward-id="cooler" data-points="120" data-reward-name="Coca-Cola Cooler" onclick="openRedeemConfirm('cooler', 120, 'Coca-Cola Cooler')" disabled>Redeem</button>
           </div>
         </div>
       </div>
@@ -433,7 +433,7 @@
     setActivePage();
 
     let currentPoints = 0;
-    const REWARD_NAMES = { keychain: 'Key chain', mug: 'Coca-Cola Mug', tote: 'Tote bag', sweatshirt: 'Sweatshirt' };
+    const REWARD_NAMES = { keychain: 'Key chain', polarbear: 'Polar Bear', mug: 'Coca-Cola Mug', mousepad: 'Mouse pad', tote: 'Tote bag', dietcokecap: 'Diet Coke Cap', tshirt: 'Coca-Cola T-shirt', sweatshirt: 'Sweatshirt', pocketwatch: 'Pocket Watch', cooler: 'Coca-Cola Cooler' };
 
     let pendingRewardId = null;
     let pendingPoints = null;

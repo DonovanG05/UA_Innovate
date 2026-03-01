@@ -260,7 +260,9 @@ public class UsersController : ControllerBase
             {
                 var allowed = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
                 {
-                    ["keychain"] = 6, ["mug"] = 12, ["tote"] = 24, ["sweatshirt"] = 40
+                    ["keychain"] = 6, ["polarbear"] = 8, ["mug"] = 12, ["mousepad"] = 15,
+                    ["tote"] = 24, ["dietcokecap"] = 28, ["tshirt"] = 35, ["sweatshirt"] = 40,
+                    ["pocketwatch"] = 45, ["cooler"] = 120
                 };
                 if (!allowed.TryGetValue(request.RewardId, out var required) || required != request.Points)
                     return BadRequest(new { message = "Invalid reward or points." });
@@ -270,9 +272,15 @@ public class UsersController : ControllerBase
                 description = request.RewardId switch
                 {
                     "keychain" => "Key chain",
+                    "polarbear" => "Polar Bear",
                     "mug" => "Coca-Cola Mug",
+                    "mousepad" => "Mouse pad",
                     "tote" => "Tote bag",
+                    "dietcokecap" => "Diet Coke Cap",
+                    "tshirt" => "Coca-Cola T-shirt",
                     "sweatshirt" => "Sweatshirt",
+                    "pocketwatch" => "Pocket Watch",
+                    "cooler" => "Coca-Cola Cooler",
                     _ => request.RewardId
                 };
                 code = "MERCH-" + request.RewardId.ToUpperInvariant() + "-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper();
