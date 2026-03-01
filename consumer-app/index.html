@@ -169,7 +169,7 @@
     <!-- GLOBAL LEADERBOARD -->
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h6 class="fw-bold mb-0" style="color: var(--coke-gray);">Global Leaderboard</h6>
-      <span class="x-small text-muted">Most bottle submissions</span>
+      <span class="x-small text-muted">Pounds of plastic recycled</span>
     </div>
 
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4 leaderboard-card" style="border-radius: 20px !important;">
@@ -264,15 +264,18 @@
       if (lbRes && lbRes.ok) {
         const leaderboard = await lbRes.json();
         if (leaderboard.length > 0) {
-          list.innerHTML = leaderboard.map(u => `
+          const LBS_PER_BOTTLE = 0.05;
+          list.innerHTML = leaderboard.map(u => {
+            const lbs = (u.scanCount || 0) * LBS_PER_BOTTLE;
+            return `
             <div class="leaderboard-row">
               <span class="leaderboard-rank">#${u.rank}</span>
               <span class="leaderboard-name">${u.firstName}</span>
-              <span class="leaderboard-scans">${u.scanCount} bottles</span>
+              <span class="leaderboard-scans">${lbs.toFixed(1)} lbs</span>
             </div>
-          `).join('');
+          `}).join('');
         } else {
-          list.innerHTML = '<div class="list-group-item py-4 text-center text-muted small">No submissions yet. Be the first to scan!</div>';
+          list.innerHTML = '<div class="list-group-item py-4 text-center text-muted small">No submissions yet. Be the first to recycle!</div>';
         }
       } else {
         list.innerHTML = '<div class="list-group-item py-4 text-center text-muted small">Could not load leaderboard.</div>';
