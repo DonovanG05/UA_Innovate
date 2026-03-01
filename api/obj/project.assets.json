@@ -648,19 +648,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\ringe\\.nuget\\packages\\": {}
+    "/Users/jykiamiller/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\coding\\Uainnovate\\UA_Innovate\\api\\api.csproj",
+      "projectUniqueName": "/Users/jykiamiller/UA_Innovate/api/api.csproj",
       "projectName": "api",
-      "projectPath": "C:\\coding\\Uainnovate\\UA_Innovate\\api\\api.csproj",
-      "packagesPath": "C:\\Users\\ringe\\.nuget\\packages\\",
-      "outputPath": "C:\\coding\\Uainnovate\\UA_Innovate\\api\\obj\\",
+      "projectPath": "/Users/jykiamiller/UA_Innovate/api/api.csproj",
+      "packagesPath": "/Users/jykiamiller/.nuget/packages/",
+      "outputPath": "/Users/jykiamiller/UA_Innovate/api/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\ringe\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "/Users/jykiamiller/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -717,7 +717,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.408/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.405/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

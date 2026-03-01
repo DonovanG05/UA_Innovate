@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\coding\\uainnovate\\ua_innovate\\api\\api.csproj": {}
+    "/Users/jykiamiller/UA_Innovate/api/api.csproj": {}
   },
   "projects": {
-    "C:\\coding\\uainnovate\\ua_innovate\\api\\api.csproj": {
+    "/Users/jykiamiller/UA_Innovate/api/api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\coding\\uainnovate\\ua_innovate\\api\\api.csproj",
+        "projectUniqueName": "/Users/jykiamiller/UA_Innovate/api/api.csproj",
         "projectName": "api",
-        "projectPath": "C:\\coding\\uainnovate\\ua_innovate\\api\\api.csproj",
-        "packagesPath": "C:\\Users\\ringe\\.nuget\\packages\\",
-        "outputPath": "C:\\coding\\uainnovate\\ua_innovate\\api\\obj\\",
+        "projectPath": "/Users/jykiamiller/UA_Innovate/api/api.csproj",
+        "packagesPath": "/Users/jykiamiller/.nuget/packages/",
+        "outputPath": "/Users/jykiamiller/UA_Innovate/api/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\ringe\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/Users/jykiamiller/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -71,7 +71,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.408/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.405/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
