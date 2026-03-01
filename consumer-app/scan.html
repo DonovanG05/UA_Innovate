@@ -4,28 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Scan — Coca-Cola Rewards</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background: #f8f9fa; padding-bottom: 80px; }
-    .nav-bottom { background: white; border-top: 1px solid #dee2e6; position: fixed; bottom: 0; width: 100%; z-index: 1000; }
-    .nav-bottom .nav-link { color: #6c757d; font-size: 0.75rem; text-align: center; }
-    .nav-bottom .nav-link.active { color: #F40009; font-weight: bold; }
-    
-    .scan-card { border: none; border-radius: 20px; overflow: hidden; min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem;}
-    
-    /* Animation for success */
+    :root { --coke-red: #F40009; --coke-soft: #fef2f1; }
+    body { background: linear-gradient(180deg, var(--coke-soft) 0%, #f5e6e4 100%); padding-bottom: 80px; font-family: 'Quicksand', sans-serif; }
+    .nav-bottom { background: #fff; border-top: 2px solid rgba(244,0,9,0.15); position: fixed; bottom: 0; width: 100%; z-index: 1000; }
+    .nav-bottom .nav-link { color: #4a4a4a; font-size: 0.75rem; text-align: center; font-weight: 600; }
+    .nav-bottom .nav-link.active { color: var(--coke-red); font-weight: 700; }
+    .scan-card { border: none; border-radius: 24px; box-shadow: 0 4px 20px rgba(244,0,9,0.08); min-height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem;}
     @keyframes pop {
       0% { transform: scale(0.8); opacity: 0; }
       50% { transform: scale(1.1); opacity: 1; }
       100% { transform: scale(1); opacity: 1; }
     }
     .success-icon { animation: pop 0.5s ease-out forwards; width: 80px; height: 80px; background: #d1e7dd; color: #0f5132; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto; }
-    
-    .points-badge { background: #F40009; color: white; padding: 0.5rem 1rem; border-radius: 50px; font-weight: bold; font-size: 1.25rem; display: inline-block; margin-top: 1rem; }
-    
-    .scanner-placeholder { width: 200px; height: 200px; border: 4px dashed #ced4da; border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem auto; position: relative; }
+    .points-badge { background: linear-gradient(135deg, var(--coke-red), #c00); color: white; padding: 0.5rem 1rem; border-radius: 50px; font-weight: bold; font-size: 1.25rem; display: inline-block; margin-top: 1rem; }
+    .scanner-placeholder { width: 200px; height: 200px; border: 4px dashed rgba(244,0,9,0.25); border-radius: 24px; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem auto; position: relative; background: var(--coke-soft); }
     .scanner-line { position: absolute; width: 100%; height: 4px; background: rgba(244, 0, 9, 0.5); top: 50%; box-shadow: 0 0 10px rgba(244, 0, 9, 0.8); animation: scan 2s infinite linear; }
-    
     @keyframes scan {
       0% { top: 10%; opacity: 0; }
       10% { opacity: 1; }
@@ -42,7 +38,7 @@
           <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
         </svg>
       </a>
-      <h5 class="fw-bold mb-0">Scan Bottle</h5>
+      <h5 class="fw-bold mb-0" style="color: #4a4a4a;">Scan Bottle</h5>
     </div>
 
     <div class="card scan-card shadow-sm bg-white" id="scanContainer">
@@ -56,7 +52,15 @@
       <!-- Selection State -->
       <div id="selectionState" class="d-none w-100">
         <h5 class="fw-bold mb-1">What are you recycling?</h5>
-        <p class="text-muted small mb-4">Select the material and brand before confirming your scan.</p>
+        <p class="text-muted small mb-4">Select size, material, and brand to earn points.</p>
+
+        <div class="mb-4">
+          <p class="fw-semibold small mb-2">Size</p>
+          <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <button class="btn btn-outline-secondary rounded-pill px-4" id="btnSize12" onclick="selectSize(12, this)">12oz bottle/can <span class="text-muted">(1 pt)</span></button>
+            <button class="btn btn-outline-secondary rounded-pill px-4" id="btnSize20" onclick="selectSize(20, this)">20oz bottle <span class="text-muted">(2 pts)</span></button>
+          </div>
+        </div>
 
         <div class="mb-4">
           <p class="fw-semibold small mb-2">Material</p>
@@ -78,7 +82,7 @@
         </div>
 
         <button id="confirmScanBtn" class="btn w-100 py-2 fw-bold text-white rounded-pill" style="background:#F40009" onclick="confirmScan()" disabled>
-          Confirm & Recycle (+2 pts)
+          Confirm & Recycle (+<span id="confirmPts">1</span> pt)
         </button>
       </div>
 
@@ -104,7 +108,7 @@
         </div>
         <h4 class="fw-bold">Scan Successful!</h4>
         <p class="text-muted small">Thank you for recycling and supporting our sustainability goals.</p>
-        <div class="points-badge">+2 Points</div>
+        <div class="points-badge" id="successPtsBadge">+1 Point</div>
         <div class="mt-4">
           <a href="index.html" class="btn btn-outline-dark rounded-pill px-4">Back to Home</a>
         </div>
@@ -164,7 +168,21 @@
     setActivePage();
 
     const ALL_STATES = ['loadingState', 'selectionState', 'instructionState', 'successState', 'errorState'];
-    let scanRvmId = null, scanBarcode = null, selectedMaterial = null, selectedBrand = null;
+    let scanRvmId = null, scanBarcode = null, selectedMaterial = null, selectedBrand = null, selectedSizeOz = 12;
+
+    function selectSize(oz, btn) {
+      selectedSizeOz = oz;
+      document.querySelectorAll('#selectionState .btn[onclick^="selectSize"]').forEach(b => {
+        b.classList.remove('btn-danger', 'text-white');
+        b.classList.add('btn-outline-secondary');
+      });
+      btn.classList.remove('btn-outline-secondary');
+      btn.classList.add('btn-danger', 'text-white');
+      const pts = oz === 12 ? 1 : 2;
+      const confirmPts = document.getElementById('confirmPts');
+      if (confirmPts) confirmPts.textContent = pts;
+      updateConfirmBtn();
+    }
 
     function showState(stateId) {
       ALL_STATES.forEach(id => document.getElementById(id).classList.add('d-none'));
@@ -194,11 +212,16 @@
     }
 
     function updateConfirmBtn() {
-      document.getElementById('confirmScanBtn').disabled = !(selectedMaterial && selectedBrand);
+      const ok = selectedMaterial && selectedBrand && selectedSizeOz;
+      document.getElementById('confirmScanBtn').disabled = !ok;
+      const pts = selectedSizeOz === 20 ? 2 : 1;
+      const confirmPts = document.getElementById('confirmPts');
+      if (confirmPts) confirmPts.textContent = pts;
     }
 
     async function confirmScan() {
       showState('loadingState');
+      const pointsToEarn = selectedSizeOz === 20 ? 2 : 1;
       try {
         const res = await apiFetch('/api/rvm/scan', {
           method: 'POST',
@@ -206,11 +229,15 @@
             rvmId: parseInt(scanRvmId),
             barcode: scanBarcode,
             materialType: selectedMaterial,
-            brand: selectedBrand
+            brand: selectedBrand,
+            sizeOz: selectedSizeOz
           })
         });
 
         if (res && res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const pts = data.points != null ? data.points : pointsToEarn;
+          document.getElementById('successPtsBadge').textContent = '+' + pts + (pts === 1 ? ' Point' : ' Points');
           showState('successState');
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
@@ -246,8 +273,8 @@
         return;
       }
 
-      // Show selection step before scanning
       showState('selectionState');
+      selectSize(12, document.getElementById('btnSize12'));
     }
 
     // Give a slight delay for realism if auto-processing

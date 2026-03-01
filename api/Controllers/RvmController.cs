@@ -168,37 +168,42 @@ public class RvmController : ControllerBase
 
         try
         {
+            var pointsToAward = request.SizeOz == 20 ? 2 : 1;
             // 1. Record the scan
             var scanCmd = conn.CreateCommand();
             scanCmd.CommandText = """
                 INSERT INTO rvm_scans (rvm_id, user_id, product_barcode, scanned_at, points_awarded, material_type, brand)
-                VALUES ($rvmId, $userId, $barcode, $now, 2, $material, $brand)
+                VALUES ($rvmId, $userId, $barcode, $now, $points, $material, $brand)
             """;
             scanCmd.Parameters.AddWithValue("$rvmId", request.RvmId);
             scanCmd.Parameters.AddWithValue("$userId", userId);
             scanCmd.Parameters.AddWithValue("$barcode", request.Barcode ?? (object)DBNull.Value);
             scanCmd.Parameters.AddWithValue("$material", request.MaterialType ?? (object)DBNull.Value);
             scanCmd.Parameters.AddWithValue("$brand", request.Brand ?? (object)DBNull.Value);
+            scanCmd.Parameters.AddWithValue("$points", pointsToAward);
+            scanCmd.Parameters.AddWithValue("$now", now);
             scanCmd.ExecuteNonQuery();
 
             // 2. Award points to user
             var userCmd = conn.CreateCommand();
-            userCmd.CommandText = "UPDATE users SET total_points = total_points + 2 WHERE id = $userId";
+            userCmd.CommandText = "UPDATE users SET total_points = total_points + $points WHERE id = $userId";
             userCmd.Parameters.AddWithValue("$userId", userId);
+            userCmd.Parameters.AddWithValue("$points", pointsToAward);
             userCmd.ExecuteNonQuery();
 
             // 3. Log reward history
             var historyCmd = conn.CreateCommand();
             historyCmd.CommandText = """
                 INSERT INTO user_rewards (user_id, type, points, description, created_at)
-                VALUES ($userId, 'earn', 2, 'RVM Bottle Scan', $now)
+                VALUES ($userId, 'earn', $points, 'RVM Bottle Scan', $now)
             """;
             historyCmd.Parameters.AddWithValue("$userId", userId);
+            historyCmd.Parameters.AddWithValue("$points", pointsToAward);
             historyCmd.Parameters.AddWithValue("$now", now);
             historyCmd.ExecuteNonQuery();
 
             tx.Commit();
-            return Ok(new { message = "Scan successful! +2 points awarded.", points = 2 });
+            return Ok(new { message = $"Scan successful! +{pointsToAward} point(s) awarded.", points = pointsToAward });
         }
         catch (Exception ex)
         {
@@ -213,5 +218,7 @@ public class RvmController : ControllerBase
         public string? Barcode { get; set; }
         public string? MaterialType { get; set; }
         public string? Brand { get; set; }
+        /// <summary>12 = 1 point, 20 = 2 points. Default 12 if not set.</summary>
+        public int SizeOz { get; set; } = 12;
     }
 }

@@ -4,23 +4,88 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Home — Coca-Cola Rewards</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background: #f8f9fa; padding-bottom: 80px; }
-    .nav-bottom { background: white; border-top: 1px solid #dee2e6; position: fixed; bottom: 0; width: 100%; z-index: 1000; }
-    .nav-bottom .nav-link { color: #6c757d; font-size: 0.75rem; text-align: center; }
-    .nav-bottom .nav-link.active { color: #F40009; font-weight: bold; }
+    :root {
+      --coke-red: #F40009;
+      --coke-red-dark: #c00;
+      --coke-white: #fff;
+      --coke-cream: #fff8f5;
+      --coke-gray: #4a4a4a;
+      --coke-soft: #fef2f1;
+    }
+    body {
+      background: linear-gradient(180deg, var(--coke-soft) 0%, #f5e6e4 100%);
+      padding-bottom: 80px;
+      font-family: 'Quicksand', sans-serif;
+    }
+    .nav-bottom {
+      background: var(--coke-white);
+      border-top: 2px solid rgba(244,0,9,0.15);
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      z-index: 1000;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.06);
+    }
+    .nav-bottom .nav-link { color: var(--coke-gray); font-size: 0.75rem; text-align: center; font-weight: 600; }
+    .nav-bottom .nav-link.active { color: var(--coke-red); font-weight: 700; }
     .nav-bottom .nav-link i { display: block; font-size: 1.25rem; margin-bottom: 2px; }
-    
-    .points-card { background: #1a1a2e; color: white; border-radius: 20px; overflow: hidden; position: relative; }
-    .points-card::after { content: ''; position: absolute; right: -20px; top: -20px; width: 100px; height: 100px; background: rgba(244,0,9,0.2); border-radius: 50%; }
-    .points-val { font-size: 3rem; font-weight: 800; line-height: 1; }
-    
-    .action-card { border: none; border-radius: 16px; transition: transform 0.2s; }
-    .action-card:active { transform: scale(0.95); }
-    
-    .btn-coke { background: #F40009; color: white; border: none; border-radius: 12px; font-weight: bold; }
+
+    .points-card {
+      background: linear-gradient(135deg, var(--coke-red) 0%, var(--coke-red-dark) 100%);
+      color: white;
+      border-radius: 24px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 12px 32px rgba(244,0,9,0.35);
+    }
+    .points-card::before {
+      content: '';
+      position: absolute;
+      right: -30px;
+      top: -30px;
+      width: 120px;
+      height: 120px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 50%;
+    }
+    .points-card::after {
+      content: '';
+      position: absolute;
+      left: -20px;
+      bottom: -20px;
+      width: 80px;
+      height: 80px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 50%;
+    }
+    .points-val { font-size: 3rem; font-weight: 800; line-height: 1; text-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .points-card .small { opacity: 0.95; }
+
+    .action-card {
+      border: none;
+      border-radius: 20px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 16px rgba(244,0,9,0.08);
+    }
+    .action-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(244,0,9,0.12); }
+    .action-card:active { transform: scale(0.98); }
+
+    .btn-coke { background: var(--coke-red); color: white; border: none; border-radius: 14px; font-weight: 700; }
     .x-small { font-size: 0.7rem; }
+
+    .rules-pill {
+      background: rgba(255,255,255,0.95);
+      color: var(--coke-gray);
+      border-radius: 12px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid rgba(244,0,9,0.15);
+    }
+    .next-reward { font-size: 0.8rem; opacity: 0.95; }
   </style>
 </head>
 <body>
@@ -28,10 +93,10 @@
     <!-- HEADER -->
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h5 class="fw-bold mb-0">Hi, <span id="userName">—</span>!</h5>
-        <p class="text-muted small mb-0">Earth's looking better already.</p>
+        <h5 class="fw-bold mb-0" style="color: var(--coke-gray);">Hi, <span id="userName">—</span>!</h5>
+        <p class="text-muted small mb-0">Earth's looking better already. 🌍</p>
       </div>
-      <button class="btn btn-light rounded-circle p-2" onclick="logout()">
+      <button class="btn rounded-circle p-2" style="background: var(--coke-soft); color: var(--coke-red);" onclick="logout()">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
           <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
           <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
@@ -40,44 +105,42 @@
     </div>
 
     <!-- POINTS CARD -->
-    <div class="points-card p-4 mb-4 shadow">
-      <div class="row align-items-center">
+    <div class="points-card p-4 mb-4">
+      <div class="row align-items-center position-relative" style="z-index:1">
         <div class="col-8">
           <p class="small text-white-50 mb-1">Your Total Balance</p>
           <div class="points-val mb-1"><span id="totalPoints">0</span></div>
           <p class="small mb-0">REWARD POINTS</p>
         </div>
         <div class="col-4 text-end">
-          <div class="p-2 bg-white bg-opacity-10 rounded-3 d-inline-block">
-            <img src="https://www.coca-cola.com/content/dam/on-premise/us/en/logos/coca-cola-logo.png" height="20" alt="Coke">
+          <div class="p-2 bg-white bg-opacity-20 rounded-3 d-inline-block">
+            <img src="https://www.coca-cola.com/content/dam/on-premise/us/en/logos/coca-cola-logo.png" height="24" alt="Coke">
           </div>
         </div>
       </div>
-      
-      <div class="mt-4">
-        <div class="d-flex justify-content-between small mb-1">
-          <span class="text-white-50">Progress to Next Coupon</span>
-          <span class="fw-bold" id="progressPct">0%</span>
+
+      <div class="mt-4 position-relative" style="z-index:1">
+        <p class="next-reward mb-2" id="nextRewardText">Earn points by recycling — next reward: Key chain (6 pts)</p>
+        <div class="progress bg-white bg-opacity-25" style="height: 10px; border-radius: 10px;">
+          <div id="progressBar" class="progress-bar bg-white" style="width: 0%; border-radius: 10px;" role="progressbar"></div>
         </div>
-        <div class="progress bg-white bg-opacity-20" style="height: 8px;">
-          <div id="progressBar" class="progress-bar bg-danger" style="width: 0%"></div>
-        </div>
-        <p class="x-small text-white-50 mt-2 mb-0">100 points = 1 Free Product Coupon</p>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2 mt-3 position-relative" style="z-index:1">
+        <span class="rules-pill">12oz bottle/can = 1 pt</span>
+        <span class="rules-pill">20oz bottle = 2 pts</span>
       </div>
     </div>
 
     <!-- QUICK ACTIONS -->
-    <h6 class="fw-bold mb-3">Quick Actions</h6>
+    <h6 class="fw-bold mb-3" style="color: var(--coke-gray);">Quick Actions</h6>
     <div class="row g-3 mb-4">
       <div class="col-6">
         <a href="scan.html" class="text-decoration-none">
-          <div class="card action-card h-100 p-3 shadow-sm bg-white text-center">
-            <div class="mb-2 mx-auto bg-danger bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#F40009" viewBox="0 0 16 16">
-                <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0v-3Zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5ZM.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5Zm15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5ZM4 4h1v1H4V4Z"/>
-                <path d="M7 2H2v5h5V2ZM3 3h3v3H3V3Zm9 0h-2v2h2V3Z"/>
-                <path d="M14 12h-3v3h3v-3Zm-1 1h1v1h-1v-1Zm-3-2h-1v2h.75v.75H9v1h2v-1h-.75v-.75h.75v-2Z"/>
-                <path d="M14 8.25h-1v1h1v-1Zm-7 5.25H6v-8h1v8Z"/>
+          <div class="card action-card h-100 p-3 bg-white text-center border-0">
+            <div class="mb-2 mx-auto rounded-circle d-flex align-items-center justify-content-center" style="width:52px; height:52px; background: var(--coke-soft);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="var(--coke-red)" viewBox="0 0 16 16">
+                <path d="M0 .5A.5.5 0 0 1 .5 0h3a.5.5 0 0 1 0 1H1v2.5a.5.5 0 0 1-1 0v-3Zm12 0a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V1h-2.5a.5.5 0 0 1-.5-.5ZM.5 12a.5.5 0 0 1 .5.5V15h2.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5Zm15 0a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H15v-2.5a.5.5 0 0 1 .5-.5Z"/>
               </svg>
             </div>
             <span class="small fw-bold text-dark">Scan Bottle</span>
@@ -86,9 +149,9 @@
       </div>
       <div class="col-6">
         <a href="rewards.html" class="text-decoration-none">
-          <div class="card action-card h-100 p-3 shadow-sm bg-white text-center">
-            <div class="mb-2 mx-auto bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#0d6efd" viewBox="0 0 16 16">
+          <div class="card action-card h-100 p-3 bg-white text-center border-0">
+            <div class="mb-2 mx-auto rounded-circle d-flex align-items-center justify-content-center" style="width:52px; height:52px; background: var(--coke-soft);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="var(--coke-red)" viewBox="0 0 16 16">
                 <path d="M5.5 9.511c.076.954.83 1.697 2.182 1.721 1.178.025 2.037-.481 2.037-1.474 0-.832-.545-1.193-1.456-1.509l-.43-.152c-.718-.244-.996-.462-.996-.83 0-.319.273-.547.746-.547.43 0 .794.18 1.106.445l.62-.755c-.397-.334-.97-.548-1.548-.548-1.332 0-2.119.683-2.119 1.569 0 .926.556 1.191 1.424 1.466l.456.147c.756.233 1.019.507 1.019.893 0 .442-.403.75-1.136.75-.61 0-1.046-.325-1.324-.64l-.651.696Z"/>
                 <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4Zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2Z"/>
               </svg>
@@ -101,11 +164,11 @@
 
     <!-- RECENT ACTIVITY -->
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h6 class="fw-bold mb-0">Recent Activity</h6>
-      <a href="history.html" class="text-decoration-none x-small fw-bold text-danger">View All</a>
+      <h6 class="fw-bold mb-0" style="color: var(--coke-gray);">Recent Activity</h6>
+      <a href="history.html" class="text-decoration-none x-small fw-bold" style="color: var(--coke-red);">View All</a>
     </div>
-    
-    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4" style="border-radius: 20px !important;">
       <div id="activityList" class="list-group list-group-flush">
         <div class="list-group-item py-4 text-center text-muted small">
           No activity yet. Scan a bottle to get started!
@@ -148,6 +211,18 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="app.js"></script>
   <script>
+    const REWARDS = [
+      { id: 'keychain', name: 'Key chain', points: 6 },
+      { id: 'mug', name: 'Coca-Cola Mug', points: 12 },
+      { id: 'tote', name: 'Tote bag', points: 24 },
+      { id: 'sweatshirt', name: 'Sweatshirt', points: 40 }
+    ];
+    function getNextReward(totalPoints) {
+      for (const r of REWARDS) {
+        if (totalPoints < r.points) return r;
+      }
+      return null;
+    }
     if (!checkAuth()) throw new Error('unauth');
     setActivePage();
 
@@ -163,10 +238,18 @@
 
       document.getElementById('userName').textContent = user.name;
       document.getElementById('totalPoints').textContent = user.totalPoints;
-      
-      const progress = Math.min(100, (user.totalPoints % 100));
-      document.getElementById('progressBar').style.width = progress + '%';
-      document.getElementById('progressPct').textContent = progress + '%';
+
+      const next = getNextReward(user.totalPoints);
+      const nextEl = document.getElementById('nextRewardText');
+      const progressEl = document.getElementById('progressBar');
+      if (next) {
+        nextEl.textContent = `Next reward: ${next.name} (${next.points} pts)`;
+        const pct = Math.min(100, (user.totalPoints / next.points) * 100);
+        progressEl.style.width = pct + '%';
+      } else {
+        nextEl.textContent = "You've unlocked all rewards! Redeem on the Rewards page.";
+        progressEl.style.width = '100%';
+      }
 
       const list = document.getElementById('activityList');
       if (history.length > 0) {

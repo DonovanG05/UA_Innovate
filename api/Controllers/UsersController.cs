@@ -154,7 +154,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("redeem")]
-    public IActionResult Redeem()
+    public IActionResult Redeem([FromBody] RedeemRequest? request = null)
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
         var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
@@ -165,51 +165,86 @@ public class UsersController : ControllerBase
 
         try
         {
-            // 1. Check points
             var checkCmd = conn.CreateCommand();
             checkCmd.CommandText = "SELECT total_points FROM users WHERE id = $userId";
             checkCmd.Parameters.AddWithValue("$userId", userId);
-            var points = Convert.ToInt32(checkCmd.ExecuteScalar() ?? 0);
+            var balance = Convert.ToInt32(checkCmd.ExecuteScalar() ?? 0);
 
-            if (points < 100) return BadRequest(new { message = "Insufficient points. 100 points required for a coupon." });
+            int pointsToDeduct;
+            string description;
+            string code;
 
-            // 2. Generate coupon
-            var code = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
+            if (request?.RewardId != null && request.Points > 0)
+            {
+                var allowed = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["keychain"] = 6, ["mug"] = 12, ["tote"] = 24, ["sweatshirt"] = 40
+                };
+                if (!allowed.TryGetValue(request.RewardId, out var required) || required != request.Points)
+                    return BadRequest(new { message = "Invalid reward or points." });
+                if (balance < required)
+                    return BadRequest(new { message = $"Insufficient points. {required} points required for this reward." });
+                pointsToDeduct = required;
+                description = request.RewardId switch
+                {
+                    "keychain" => "Key chain",
+                    "mug" => "Coca-Cola Mug",
+                    "tote" => "Tote bag",
+                    "sweatshirt" => "Sweatshirt",
+                    _ => request.RewardId
+                };
+                code = "MERCH-" + request.RewardId.ToUpperInvariant() + "-" + Guid.NewGuid().ToString("N").Substring(0, 6).ToUpper();
+            }
+            else
+            {
+                pointsToDeduct = 100;
+                if (balance < 100) return BadRequest(new { message = "Insufficient points. 100 points required for a coupon." });
+                description = "Free 355mL Coca-Cola Product";
+                code = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
+            }
+
             var couponCmd = conn.CreateCommand();
             couponCmd.CommandText = """
                 INSERT INTO coupons (user_id, code, discount_description, issued_at)
-                VALUES ($userId, $code, 'Free 355mL Coca-Cola Product', $now)
+                VALUES ($userId, $code, $desc, $now)
             """;
             couponCmd.Parameters.AddWithValue("$userId", userId);
             couponCmd.Parameters.AddWithValue("$code", code);
+            couponCmd.Parameters.AddWithValue("$desc", description);
             couponCmd.Parameters.AddWithValue("$now", now);
             couponCmd.ExecuteNonQuery();
 
-            // 3. Deduct points
             var deductCmd = conn.CreateCommand();
-            deductCmd.CommandText = "UPDATE users SET total_points = total_points - 100 WHERE id = $userId";
+            deductCmd.CommandText = "UPDATE users SET total_points = total_points - $points WHERE id = $userId";
             deductCmd.Parameters.AddWithValue("$userId", userId);
+            deductCmd.Parameters.AddWithValue("$points", pointsToDeduct);
             deductCmd.ExecuteNonQuery();
 
-            // 4. Log reward history
             var historyCmd = conn.CreateCommand();
             historyCmd.CommandText = """
                 INSERT INTO user_rewards (user_id, type, points, description, created_at)
-                VALUES ($userId, 'redeem', 100, 'Redeemed for Coupon: ' || $code, $now)
+                VALUES ($userId, 'redeem', $points, 'Redeemed: ' || $desc, $now)
             """;
             historyCmd.Parameters.AddWithValue("$userId", userId);
-            historyCmd.Parameters.AddWithValue("$code", code);
+            historyCmd.Parameters.AddWithValue("$points", pointsToDeduct);
+            historyCmd.Parameters.AddWithValue("$desc", description);
             historyCmd.Parameters.AddWithValue("$now", now);
             historyCmd.ExecuteNonQuery();
 
             tx.Commit();
-            return Ok(new { message = "Reward redeemed successfully!", code, description = "Free 355mL Coca-Cola Product" });
+            return Ok(new { message = "Reward redeemed successfully!", code, description });
         }
         catch (Exception ex)
         {
             tx.Rollback();
             return BadRequest(new { message = "Redemption failed.", error = ex.Message });
         }
+    }
+
+    public class RedeemRequest
+    {
+        public string? RewardId { get; set; }
+        public int Points { get; set; }
     }
 
     [HttpGet("coupons")]

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Signing you in…</title>
+  <style>
+    body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #fef2f1; }
+    p { color: #4a4a4a; }
+  </style>
+</head>
+<body>
+  <p id="msg">Signing you in…</p>
+  <script>
+    (function() {
+      var hash = window.location.hash.slice(1);
+      var params = new URLSearchParams(hash);
+      var token = params.get('token');
+      if (token) {
+        localStorage.setItem('userToken', token);
+        var redir = params.get('redirect') || 'index.html';
+        window.location.replace(redir);
+      } else {
+        document.getElementById('msg').textContent = 'No token in URL. Use login.html to sign in with email and password.';
+      }
+    })();
+  </script>
+</body>
+</html>
