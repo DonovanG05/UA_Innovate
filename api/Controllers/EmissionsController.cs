@@ -32,7 +32,11 @@ public class EmissionsController : ControllerBase
                 CAST(COALESCE((SELECT amount_mtco2e FROM emissions_data WHERE area_id=a.id AND year=2023 AND category='energy'),0) AS REAL)        AS energy,
                 CAST(COALESCE((SELECT amount_mtco2e FROM emissions_data WHERE area_id=a.id AND year=2023 AND category='refrigeration'),0) AS REAL) AS refrigeration,
                 CAST(COALESCE((SELECT amount_mtco2e FROM emissions_data WHERE area_id=a.id AND year=2023 AND category='packaging'),0) AS REAL)     AS packaging,
-                CAST(COALESCE((SELECT value FROM carbon_initiatives WHERE area_id=a.id AND initiative_type='rvm'),0) AS REAL)              AS rvm_count,
+                (SELECT COUNT(*) FROM rvm_machines m WHERE m.active = 1 AND (
+                    m.area_id = a.id
+                    OR m.area_id IN (SELECT id FROM areas WHERE parent_id = a.id)
+                    OR m.area_id IN (SELECT id FROM areas WHERE parent_id IN (SELECT id FROM areas WHERE parent_id = a.id))
+                )) AS rvm_count,
                 CAST(COALESCE((SELECT value FROM carbon_initiatives WHERE area_id=a.id AND initiative_type='ev_fleet'),0) AS REAL)         AS ev_pct,
                 CAST(COALESCE((SELECT value FROM carbon_initiatives WHERE area_id=a.id AND initiative_type='renewable_energy'),0) AS REAL) AS renewable_pct
             FROM areas a
