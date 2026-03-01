@@ -17,7 +17,15 @@ public static class Seeder
 
         using var check = conn.CreateCommand();
         check.CommandText = "SELECT COUNT(*) FROM areas";
-        if ((long)check.ExecuteScalar()! > 0) return;
+        if ((long)check.ExecuteScalar()! > 0)
+        {
+            // DB already seeded — insert mock scans if none
+            var scanCheck = conn.CreateCommand();
+            scanCheck.CommandText = "SELECT COUNT(*) FROM rvm_scans";
+            if ((long)scanCheck.ExecuteScalar()! == 0)
+                InsertMockScans(conn);
+            return;
+        }
 
         using var tx = conn.BeginTransaction();
 
@@ -250,6 +258,8 @@ public static class Seeder
             cmd.ExecuteNonQuery();
         }
 
+        InsertMockScans(conn);
+
         // ── ADMIN USER ───────────────────────────────────────────────────────
         var adminHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("Demo1234!"))).ToLower();
         var adminCmd = conn.CreateCommand();
@@ -334,6 +344,40 @@ public static class Seeder
     }
 
     // ── HELPERS ──────────────────────────────────────────────────────────────
+
+    private static void InsertMockScans(SqliteConnection conn)
+    {
+        var rvmIdList = new List<int>();
+        using (var rvmReader = conn.CreateCommand())
+        {
+            rvmReader.CommandText = "SELECT id FROM rvm_machines";
+            using var rr = rvmReader.ExecuteReader();
+            while (rr.Read()) rvmIdList.Add(rr.GetInt32(0));
+        }
+        if (rvmIdList.Count == 0) return;
+        var brands = new[] { "Sprite", "Coke", "Diet Coke", "Coke Zero" };
+        var materials = new[] { "plastic", "aluminum" };
+        var rng = new Random(42);
+        var baseDate = DateTime.UtcNow.AddMonths(-6);
+        for (int i = 0; i < 200; i++)
+        {
+            int rvmId = rvmIdList[rng.Next(rvmIdList.Count)];
+            string brand = brands[rng.Next(brands.Length)];
+            string material = materials[rng.Next(materials.Length)];
+            var scannedAt = baseDate.AddDays(rng.Next(180)).AddMinutes(rng.Next(1440)).ToString("yyyy-MM-dd HH:mm:ss");
+            var scanCmd = conn.CreateCommand();
+            scanCmd.CommandText = """
+                INSERT INTO rvm_scans (rvm_id, user_id, product_barcode, scanned_at, points_awarded, material_type, brand)
+                VALUES ($rvmId, NULL, $barcode, $scannedAt, 2, $material, $brand)
+            """;
+            scanCmd.Parameters.AddWithValue("$rvmId", rvmId);
+            scanCmd.Parameters.AddWithValue("$barcode", $"MOCK{rng.Next(100000, 999999)}");
+            scanCmd.Parameters.AddWithValue("$scannedAt", scannedAt);
+            scanCmd.Parameters.AddWithValue("$material", material);
+            scanCmd.Parameters.AddWithValue("$brand", brand);
+            scanCmd.ExecuteNonQuery();
+        }
+    }
 
     private static int InsertArea(SqliteConnection conn, string name, string type, int? parentId, double lat, double lon)
     {
