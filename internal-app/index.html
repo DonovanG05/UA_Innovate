@@ -190,19 +190,21 @@
     }
 
     async function load() {
-      const res = await apiFetch('/api/dashboard/summary');
-      if (!res) return;
-      const d = await res.json();
+      try {
+        const res = await apiFetch('/api/dashboard/summary');
+        if (!res || !res.ok) return;
+        const d = await res.json();
+        if (!d || typeof d.totalEmissionsMtco2e === 'undefined') return;
 
-      document.getElementById('kpiTotal').textContent = fmt(d.totalEmissionsMtco2e);
-      document.getElementById('kpiA').textContent = d.gradeA;
-      document.getElementById('kpiB').textContent = d.gradeB;
-      document.getElementById('kpiC').textContent = d.gradeC;
-      document.getElementById('kpiRvms').textContent = fmt(d.activeRvms);
-      document.getElementById('kpiScans').textContent = fmt(d.totalRvmScans);
+        document.getElementById('kpiTotal').textContent = fmt(d.totalEmissionsMtco2e);
+        document.getElementById('kpiA').textContent = d.gradeA ?? 0;
+        document.getElementById('kpiB').textContent = d.gradeB ?? 0;
+        document.getElementById('kpiC').textContent = d.gradeC ?? 0;
+        document.getElementById('kpiRvms').textContent = fmt(d.activeRvms ?? 0);
+        document.getElementById('kpiScans').textContent = fmt(d.totalRvmScans ?? 0);
 
-      const tbody = document.getElementById('worstTable');
-      tbody.innerHTML = d.worstAreas.map(a => `
+        const tbody = document.getElementById('worstTable');
+        tbody.innerHTML = (d.worstAreas || []).map(a => `
         <tr>
           <td class="fw-semibold">${a.name}</td>
           <td>${gradeBadge(a.grade)}</td>
@@ -210,6 +212,9 @@
           <td>${fmt(a.finalScore)}</td>
         </tr>
       `).join('');
+      } catch (e) {
+        console.error('Dashboard load failed', e);
+      }
     }
 
     async function sendQuery() {
