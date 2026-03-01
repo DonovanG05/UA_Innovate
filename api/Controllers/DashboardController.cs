@@ -59,7 +59,7 @@ public class DashboardController : ControllerBase
         // Top 5 worst states (highest final_score = worst)
         var worstCmd = conn.CreateCommand();
         worstCmd.CommandText = """
-            SELECT a.name, eg.grade, CAST(eg.raw_score AS REAL), CAST(eg.final_score AS REAL)
+            SELECT a.id, a.name, eg.grade, CAST(eg.raw_score AS REAL), CAST(eg.final_score AS REAL)
             FROM emission_grades eg
             JOIN areas a ON a.id = eg.area_id
             WHERE a.type = 'state'
@@ -69,7 +69,7 @@ public class DashboardController : ControllerBase
         var worst = new List<object>();
         using (var r = worstCmd.ExecuteReader())
             while (r.Read())
-                worst.Add(new { name = r.GetString(0), grade = r.GetString(1), rawScore = r.GetDouble(2), finalScore = r.GetDouble(3) });
+                worst.Add(new { id = r.GetInt32(0), name = r.GetString(1), grade = r.GetString(2), rawScore = r.GetDouble(3), finalScore = r.GetDouble(4) });
 
         // Active RVM machine count
         var rvmCmd = conn.CreateCommand();

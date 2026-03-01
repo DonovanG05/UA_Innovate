@@ -29,6 +29,7 @@
           <li class="nav-item"><a class="nav-link" href="emissions.html">Emissions</a></li>
           <li class="nav-item"><a class="nav-link" href="rvm-impact.html">RVM Impact</a></li>
           <li class="nav-item"><a class="nav-link" href="ai-insights.html">AI Insights</a></li>
+          <li class="nav-item"><a class="nav-link" href="users.html">Users</a></li>
         </ul>
         <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
       </div>
@@ -70,9 +71,12 @@
 
     <!-- TABLE -->
     <div class="card border-0 shadow-sm">
-      <div class="card-header bg-white fw-semibold d-flex justify-content-between">
+      <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
         <span>Detailed Breakdown</span>
-        <span id="areaCount" class="text-muted small"></span>
+        <div class="d-flex align-items-center gap-3">
+          <span id="areaCount" class="text-muted small"></span>
+          <button class="btn btn-outline-secondary btn-sm" onclick="exportCsv()">Export Emissions CSV</button>
+        </div>
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
@@ -200,6 +204,16 @@
           <td>${fmt(a.finalScore)}</td>
         </tr>
       `).join('');
+    }
+
+    async function exportCsv() {
+      const res = await apiFetch('/api/export/emissions');
+      if (!res || !res.ok) { alert('Export failed.'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'emissions.csv'; a.click();
+      URL.revokeObjectURL(url);
     }
 
     load('state');

@@ -70,7 +70,9 @@ public class Database
                 user_id INTEGER REFERENCES users(id),
                 product_barcode TEXT,
                 scanned_at TEXT NOT NULL,
-                points_awarded INTEGER NOT NULL DEFAULT 2
+                points_awarded INTEGER NOT NULL DEFAULT 2,
+                material_type TEXT,
+                brand TEXT
             );
 
             CREATE TABLE IF NOT EXISTS users (
@@ -79,7 +81,9 @@ public class Database
                 password_hash TEXT NOT NULL,
                 name TEXT NOT NULL,
                 created_at TEXT NOT NULL,
-                total_points INTEGER NOT NULL DEFAULT 0
+                total_points INTEGER NOT NULL DEFAULT 0,
+                age INTEGER,
+                zip_code TEXT
             );
 
             CREATE TABLE IF NOT EXISTS user_rewards (
@@ -124,5 +128,22 @@ public class Database
             cmd.CommandText = trimmed;
             cmd.ExecuteNonQuery();
         }
+
+        // Migrations for existing databases (SQLite ignores errors on duplicate columns)
+        RunMigration(conn, "ALTER TABLE users ADD COLUMN age INTEGER");
+        RunMigration(conn, "ALTER TABLE users ADD COLUMN zip_code TEXT");
+        RunMigration(conn, "ALTER TABLE rvm_scans ADD COLUMN material_type TEXT");
+        RunMigration(conn, "ALTER TABLE rvm_scans ADD COLUMN brand TEXT");
+    }
+
+    private static void RunMigration(SqliteConnection conn, string sql)
+    {
+        try
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = sql;
+            cmd.ExecuteNonQuery();
+        }
+        catch { /* Column already exists — safe to ignore */ }
     }
 }

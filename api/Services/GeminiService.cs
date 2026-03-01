@@ -12,14 +12,17 @@ public class GeminiService
 
     public GeminiService(IConfiguration config, HttpClient httpClient)
     {
-        _apiKey = config["GeminiApiKey"]!;
+        var configKey = config["GeminiApiKey"];
+        _apiKey = string.IsNullOrEmpty(configKey)
+            ? (Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "")
+            : configKey;
         _httpClient = httpClient;
     }
 
     public async Task<string> GenerateInsight(string name, string type, string grade, double total, 
         double t, double f, double e, double o, int rvmCount, double evPct, double rePct)
     {
-        if (string.IsNullOrEmpty(_apiKey) || _apiKey == "YOUR_GEMINI_API_KEY_HERE")
+        if (string.IsNullOrEmpty(_apiKey) || _apiKey == "paste_your_key_here" || _apiKey == "your_gemini_api_key_here")
             return "Gemini API key not configured. Please add it to appsettings.json to see AI recommendations.";
 
         var prompt = $"""
@@ -41,7 +44,7 @@ public class GeminiService
 
     public async Task<string> QueryWithContext(string areaName, string grade, double totalEmissions, string userQuestion)
     {
-        if (string.IsNullOrEmpty(_apiKey) || _apiKey == "YOUR_GEMINI_API_KEY_HERE")
+        if (string.IsNullOrEmpty(_apiKey) || _apiKey == "paste_your_key_here" || _apiKey == "your_gemini_api_key_here")
             return "Gemini API key not configured. I'm unable to answer your question at this time.";
 
         var prompt = $"""
@@ -58,7 +61,7 @@ public class GeminiService
 
     private async Task<string> CallGemini(string prompt)
     {
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={_apiKey}";
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={_apiKey}";
         
         var requestBody = new
         {
@@ -69,7 +72,7 @@ public class GeminiService
             generationConfig = new
             {
                 temperature = 0.7,
-                maxOutputTokens = 800
+                maxOutputTokens = 2000
             }
         };
 

@@ -14,6 +14,14 @@
     .grade-b { color: #e6a817; }
     .grade-c { color: #dc3545; }
     .worst-badge { font-size: .75rem; }
+    /* AI panels */
+    .ai-suggestion-card { border-left: 4px solid #F40009; border-radius: 8px; padding: 1rem; background: white; margin-bottom: 0.75rem; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .ai-chat-box { height: 260px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 12px; }
+    .msg { margin-bottom: 10px; max-width: 88%; padding: 9px 13px; border-radius: 14px; font-size: 0.85rem; }
+    .msg-user { background: #1a1a2e; color: white; margin-left: auto; border-bottom-right-radius: 3px; }
+    .msg-ai { background: white; color: #333; border: 1px solid #dee2e6; border-bottom-left-radius: 3px; }
+    .ai-typing { font-style: italic; color: #6c757d; font-size: 0.8rem; }
+    #chatPanel { transition: all 0.2s; }
   </style>
 </head>
 <body>
@@ -30,6 +38,7 @@
           <li class="nav-item"><a class="nav-link" href="emissions.html">Emissions</a></li>
           <li class="nav-item"><a class="nav-link" href="rvm-impact.html">RVM Impact</a></li>
           <li class="nav-item"><a class="nav-link" href="ai-insights.html">AI Insights</a></li>
+          <li class="nav-item"><a class="nav-link" href="users.html">Users</a></li>
         </ul>
         <span class="navbar-text me-3 text-white-50 small" id="adminName"></span>
         <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
@@ -135,6 +144,56 @@
         </div>
       </div>
     </div>
+
+    <!-- AI PANELS -->
+    <div class="row g-3 mt-1">
+      <!-- Panel A: AI Suggested Actions -->
+      <div class="col-lg-7">
+        <div class="card kpi-card h-100">
+          <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">🤖 AI Suggested Actions</span>
+            <span class="badge bg-danger text-white small" id="aiContextLabel">Loading...</span>
+          </div>
+          <div class="card-body" id="aiSuggestionsPanel">
+            <div class="text-center py-4" id="aiSuggestPrompt">
+              <p class="text-muted small mb-3">Get an AI recommendation for the worst-performing area.</p>
+              <button class="btn btn-sm btn-outline-danger rounded-pill px-4" onclick="triggerAiSuggestion()">Generate Recommendation</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel B: AI Quick Chat -->
+      <div class="col-lg-5">
+        <div class="card kpi-card h-100">
+          <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">💬 Quick AI Consultant</span>
+            <button class="btn btn-sm btn-outline-secondary py-0" onclick="toggleChat()">
+              <span id="chatToggleLabel">Expand</span>
+            </button>
+          </div>
+          <div id="chatPanel" style="display:none">
+            <div class="card-body d-flex flex-column" style="padding:1rem">
+              <div class="ai-chat-box d-flex flex-column mb-3" id="dashChatBox">
+                <div class="msg msg-ai">
+                  Hi! I'm pre-loaded with your worst-performing area's context. Ask me anything about reducing its emissions.
+                </div>
+              </div>
+              <div class="input-group input-group-sm">
+                <input type="text" id="dashUserInput" class="form-control" placeholder="Ask a sustainability question..."
+                  onkeypress="if(event.key==='Enter') sendDashQuery()">
+                <button class="btn btn-danger" onclick="sendDashQuery()" id="dashSendBtn">Ask</button>
+              </div>
+              <p class="text-muted x-small mt-1 mb-0" style="font-size:0.7rem">Context: worst-performing area · <a href="ai-insights.html" class="text-decoration-none">Full AI Insights →</a></p>
+            </div>
+          </div>
+          <div id="chatCollapsed" class="card-body text-center py-4">
+            <p class="text-muted small mb-2">Inline AI chat for quick sustainability queries.</p>
+            <button class="btn btn-sm btn-outline-danger rounded-pill px-4" onclick="toggleChat()">Open Chat</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -143,6 +202,9 @@
     if (!checkAuth()) throw new Error('unauth');
     document.getElementById('adminName').textContent = localStorage.getItem('adminName') || '';
     setActivePage();
+
+    let defaultAiAreaId = null;
+    const aiHistory = JSON.parse(sessionStorage.getItem('aiHistory') || '[]');
 
     async function load() {
       const res = await apiFetch('/api/dashboard/summary');
@@ -165,6 +227,115 @@
           <td>${fmt(a.finalScore)}</td>
         </tr>
       `).join('');
+
+      // Store worst area for AI use — don't auto-call Gemini on load
+      if (d.worstAreas && d.worstAreas.length > 0) {
+        const worst = d.worstAreas[0];
+        defaultAiAreaId = worst.id;
+        document.getElementById('aiContextLabel').textContent = worst.name + ' · Grade ' + worst.grade;
+      }
+    }
+
+    function triggerAiSuggestion() {
+      if (!defaultAiAreaId) { alert('Dashboard still loading, try again in a moment.'); return; }
+      const panel = document.getElementById('aiSuggestionsPanel');
+      panel.innerHTML = `<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-danger" role="status"></div><p class="mt-2 text-muted small">Asking Gemini...</p></div>`;
+      loadAiSuggestions(defaultAiAreaId);
+    }
+
+    async function loadAiSuggestions(areaId) {
+      const panel = document.getElementById('aiSuggestionsPanel');
+      try {
+        const res = await apiFetch('/api/insights/query', {
+          method: 'POST',
+          body: JSON.stringify({
+            areaId: parseInt(areaId),
+            question: 'In 2-3 sentences, what is the single most impactful action to reduce carbon emissions here?'
+          })
+        });
+        if (!res || !res.ok) {
+          panel.innerHTML = '<p class="text-muted small">Could not load AI suggestion.</p>';
+          return;
+        }
+        const data = await res.json();
+        const text = (data.answer || '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        panel.innerHTML = `
+          <div class="ai-suggestion-card">
+            <div class="d-flex align-items-start gap-2">
+              <span style="font-size:1.4rem">♻️</span>
+              <div>
+                <p class="small mb-2">${text}</p>
+                <a href="ai-insights.html" class="small text-danger text-decoration-none fw-semibold">Full AI Insights →</a>
+              </div>
+            </div>
+          </div>`;
+      } catch (e) {
+        panel.innerHTML = '<p class="text-muted small">Error loading AI suggestion.</p>';
+      }
+    }
+
+    function toggleChat() {
+      const panel = document.getElementById('chatPanel');
+      const collapsed = document.getElementById('chatCollapsed');
+      const lbl = document.getElementById('chatToggleLabel');
+      const isOpen = panel.style.display !== 'none';
+      panel.style.display = isOpen ? 'none' : 'block';
+      collapsed.style.display = isOpen ? 'block' : 'none';
+      lbl.textContent = isOpen ? 'Expand' : 'Collapse';
+    }
+
+    async function sendDashQuery() {
+      if (!defaultAiAreaId) { alert('Dashboard data still loading. Please wait.'); return; }
+      const input = document.getElementById('dashUserInput');
+      const chat = document.getElementById('dashChatBox');
+      const btn = document.getElementById('dashSendBtn');
+      const question = input.value.trim();
+      if (!question) return;
+
+      // Add user message
+      const uMsg = document.createElement('div');
+      uMsg.className = 'msg msg-user';
+      uMsg.textContent = question;
+      chat.appendChild(uMsg);
+      input.value = '';
+      chat.scrollTop = chat.scrollHeight;
+
+      // Build context-aware prompt using history
+      const historyContext = aiHistory.slice(-3).map(h => `Q: ${h.q}\nA: ${h.a}`).join('\n\n');
+      const fullQuestion = historyContext ? `Previous context:\n${historyContext}\n\nNew question: ${question}` : question;
+
+      // Typing indicator
+      const tMsg = document.createElement('div');
+      tMsg.className = 'msg msg-ai ai-typing';
+      tMsg.id = 'dashTyping';
+      tMsg.textContent = 'Gemini is thinking...';
+      chat.appendChild(tMsg);
+      chat.scrollTop = chat.scrollHeight;
+      btn.disabled = true;
+
+      try {
+        const res = await apiFetch('/api/insights/query', {
+          method: 'POST',
+          body: JSON.stringify({ areaId: parseInt(defaultAiAreaId), question: fullQuestion })
+        });
+        const data = await res.json();
+        document.getElementById('dashTyping').remove();
+
+        const aMsg = document.createElement('div');
+        aMsg.className = 'msg msg-ai';
+        aMsg.innerHTML = data.answer.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+        chat.appendChild(aMsg);
+
+        // Save to session history (last 3)
+        aiHistory.push({ q: question, a: data.answer });
+        if (aiHistory.length > 3) aiHistory.shift();
+        sessionStorage.setItem('aiHistory', JSON.stringify(aiHistory));
+      } catch (e) {
+        document.getElementById('dashTyping').textContent = 'Error: Could not reach Gemini.';
+      } finally {
+        btn.disabled = false;
+        chat.scrollTop = chat.scrollHeight;
+      }
     }
 
     load();

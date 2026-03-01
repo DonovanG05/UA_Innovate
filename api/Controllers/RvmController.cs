@@ -63,10 +63,9 @@ public class RvmController : ControllerBase
         cmd.Parameters.AddWithValue("$areaId", areaId);
         var currentEmissions = Convert.ToDouble(cmd.ExecuteScalar() ?? 0);
 
-        // Impact formula: each RVM reduces 200 MTCO2e (matching the grading formula deduction)
-        // In a real scenario, this would be based on historical scan data, but for a hackathon,
-        // we use the same weight as the grading system.
-        double reductionPerRvm = 200.0;
+        // Realistic formula: 500 items/day × 365 days × ~100g CO2e/item = ~18 MTCO2e/year
+        // Rounded conservatively to 15 MTCO2e per RVM per year.
+        double reductionPerRvm = 15.0;
         double projectedReduction = rvmCount * reductionPerRvm;
         double projectedEmissions = Math.Max(0, currentEmissions - projectedReduction);
         double percentReduction = currentEmissions > 0 ? (projectedReduction / currentEmissions) * 100 : 0;
@@ -97,12 +96,14 @@ public class RvmController : ControllerBase
             // 1. Record the scan
             var scanCmd = conn.CreateCommand();
             scanCmd.CommandText = """
-                INSERT INTO rvm_scans (rvm_id, user_id, product_barcode, scanned_at, points_awarded)
-                VALUES ($rvmId, $userId, $barcode, $now, 2)
+                INSERT INTO rvm_scans (rvm_id, user_id, product_barcode, scanned_at, points_awarded, material_type, brand)
+                VALUES ($rvmId, $userId, $barcode, $now, 2, $material, $brand)
             """;
             scanCmd.Parameters.AddWithValue("$rvmId", request.RvmId);
             scanCmd.Parameters.AddWithValue("$userId", userId);
             scanCmd.Parameters.AddWithValue("$barcode", request.Barcode ?? (object)DBNull.Value);
+            scanCmd.Parameters.AddWithValue("$material", request.MaterialType ?? (object)DBNull.Value);
+            scanCmd.Parameters.AddWithValue("$brand", request.Brand ?? (object)DBNull.Value);
             scanCmd.ExecuteNonQuery();
 
             // 2. Award points to user
@@ -135,5 +136,7 @@ public class RvmController : ControllerBase
     {
         public int RvmId { get; set; }
         public string? Barcode { get; set; }
+        public string? MaterialType { get; set; }
+        public string? Brand { get; set; }
     }
 }

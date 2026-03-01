@@ -53,6 +53,35 @@
         <p class="text-muted small">Communicating with the RVM.</p>
       </div>
 
+      <!-- Selection State -->
+      <div id="selectionState" class="d-none w-100">
+        <h5 class="fw-bold mb-1">What are you recycling?</h5>
+        <p class="text-muted small mb-4">Select the material and brand before confirming your scan.</p>
+
+        <div class="mb-4">
+          <p class="fw-semibold small mb-2">Material</p>
+          <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <button class="btn btn-outline-secondary rounded-pill px-4" id="btnPlastic" onclick="selectMaterial('plastic', this)">Plastic</button>
+            <button class="btn btn-outline-secondary rounded-pill px-4" id="btnAluminum" onclick="selectMaterial('aluminum', this)">Aluminum</button>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <p class="fw-semibold small mb-2">Brand</p>
+          <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="selectBrand('coke', this)">Coke</button>
+            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="selectBrand('diet-coke', this)">Diet Coke</button>
+            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="selectBrand('sprite', this)">Sprite</button>
+            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="selectBrand('fanta', this)">Fanta</button>
+            <button class="btn btn-outline-secondary rounded-pill px-3" onclick="selectBrand('other', this)">Other</button>
+          </div>
+        </div>
+
+        <button id="confirmScanBtn" class="btn w-100 py-2 fw-bold text-white rounded-pill" style="background:#F40009" onclick="confirmScan()" disabled>
+          Confirm & Recycle (+2 pts)
+        </button>
+      </div>
+
       <!-- Instruction State -->
       <div id="instructionState" class="d-none w-100">
         <div class="scanner-placeholder">
@@ -134,34 +163,55 @@
     if (!checkAuth()) throw new Error('unauth');
     setActivePage();
 
+    const ALL_STATES = ['loadingState', 'selectionState', 'instructionState', 'successState', 'errorState'];
+    let scanRvmId = null, scanBarcode = null, selectedMaterial = null, selectedBrand = null;
+
     function showState(stateId) {
-      ['loadingState', 'instructionState', 'successState', 'errorState'].forEach(id => {
-        document.getElementById(id).classList.add('d-none');
-      });
+      ALL_STATES.forEach(id => document.getElementById(id).classList.add('d-none'));
       document.getElementById(stateId).classList.remove('d-none');
     }
 
-    async function processScan() {
-      const params = new URLSearchParams(window.location.search);
-      const rvmId = params.get('rvm_id');
-      const barcode = params.get('barcode');
+    function selectMaterial(val, btn) {
+      selectedMaterial = val;
+      document.querySelectorAll('#selectionState .btn[onclick^="selectMaterial"]').forEach(b => {
+        b.classList.remove('btn-danger', 'text-white');
+        b.classList.add('btn-outline-secondary');
+      });
+      btn.classList.remove('btn-outline-secondary');
+      btn.classList.add('btn-danger', 'text-white');
+      updateConfirmBtn();
+    }
 
-      if (!rvmId) {
-        showState('instructionState');
-        return;
-      }
+    function selectBrand(val, btn) {
+      selectedBrand = val;
+      document.querySelectorAll('#selectionState .btn[onclick^="selectBrand"]').forEach(b => {
+        b.classList.remove('btn-danger', 'text-white');
+        b.classList.add('btn-outline-secondary');
+      });
+      btn.classList.remove('btn-outline-secondary');
+      btn.classList.add('btn-danger', 'text-white');
+      updateConfirmBtn();
+    }
 
+    function updateConfirmBtn() {
+      document.getElementById('confirmScanBtn').disabled = !(selectedMaterial && selectedBrand);
+    }
+
+    async function confirmScan() {
       showState('loadingState');
-
       try {
         const res = await apiFetch('/api/rvm/scan', {
           method: 'POST',
-          body: JSON.stringify({ rvmId: parseInt(rvmId), barcode })
+          body: JSON.stringify({
+            rvmId: parseInt(scanRvmId),
+            barcode: scanBarcode,
+            materialType: selectedMaterial,
+            brand: selectedBrand
+          })
         });
 
         if (res && res.ok) {
           showState('successState');
-          // Clear URL params so refresh doesn't rescan
           window.history.replaceState({}, document.title, window.location.pathname);
         } else {
           const data = await res?.json();
@@ -172,6 +222,32 @@
         document.getElementById('errorMsg').textContent = 'Connection error. Please try again.';
         showState('errorState');
       }
+    }
+
+    async function processScan() {
+      const params = new URLSearchParams(window.location.search);
+      scanRvmId = params.get('rvm_id');
+      scanBarcode = params.get('barcode');
+
+      // Pre-populate from URL params if provided (QR code embedding)
+      const urlMaterial = params.get('material');
+      const urlBrand = params.get('brand');
+      if (urlMaterial) {
+        const btn = document.getElementById('btn' + urlMaterial.charAt(0).toUpperCase() + urlMaterial.slice(1));
+        if (btn) selectMaterial(urlMaterial, btn);
+      }
+      if (urlBrand) {
+        const allBrandBtns = document.querySelectorAll('#selectionState .btn[onclick^="selectBrand"]');
+        allBrandBtns.forEach(b => { if (b.getAttribute('onclick').includes(`'${urlBrand}'`)) selectBrand(urlBrand, b); });
+      }
+
+      if (!scanRvmId) {
+        showState('instructionState');
+        return;
+      }
+
+      // Show selection step before scanning
+      showState('selectionState');
     }
 
     // Give a slight delay for realism if auto-processing

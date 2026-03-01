@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Users — Coca-Cola Sustainability</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f0f2f5; }
+    .navbar-brand span { color: #F40009; }
+    .kpi-card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .tier-platinum { color: #6f42c1; font-weight: 700; }
+    .tier-gold { color: #e6a817; font-weight: 700; }
+    .tier-silver { color: #6c757d; font-weight: 700; }
+    .tier-bronze { color: #c17f24; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg navbar-dark" style="background:#1a1a2e">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="index.html"><span>●</span> Coca-Cola Sustainability</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="nav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="index.html">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="emissions.html">Emissions</a></li>
+          <li class="nav-item"><a class="nav-link" href="rvm-impact.html">RVM Impact</a></li>
+          <li class="nav-item"><a class="nav-link" href="ai-insights.html">AI Insights</a></li>
+          <li class="nav-item"><a class="nav-link" href="users.html">Users</a></li>
+        </ul>
+        <span class="navbar-text me-3 text-white-50 small" id="adminName"></span>
+        <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid py-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="fw-bold mb-0">Consumer Users</h4>
+        <p class="text-muted small mb-0">Registered loyalty program members · PII masked for privacy</p>
+      </div>
+      <button class="btn btn-outline-secondary btn-sm" onclick="exportUsers()">Export Users CSV</button>
+    </div>
+
+    <!-- FILTER / SORT BAR -->
+    <div class="card kpi-card p-3 mb-4">
+      <div class="row g-2 align-items-end">
+        <div class="col-sm-4">
+          <label class="form-label small fw-bold mb-1">Sort By</label>
+          <select class="form-select form-select-sm" id="sortBy" onchange="loadUsers()">
+            <option value="">Default</option>
+            <option value="points">Points (high→low)</option>
+            <option value="scans">Scans (high→low)</option>
+            <option value="tier">Tier (Platinum first)</option>
+          </select>
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label small fw-bold mb-1">Filter by Zip Code</label>
+          <input type="text" class="form-control form-control-sm" id="zipFilter" placeholder="e.g. 3" maxlength="5" oninput="loadUsers()">
+        </div>
+        <div class="col-sm-4">
+          <span class="text-muted small" id="userCount"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS TABLE -->
+    <div class="card kpi-card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm mb-0">
+            <thead class="table-light small text-uppercase">
+              <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Name</th>
+                <th class="text-center">Age</th>
+                <th>Zip</th>
+                <th class="text-end">Points</th>
+                <th class="text-end">Scans</th>
+                <th>Fav. RVM Location</th>
+                <th class="text-center">Tier</th>
+              </tr>
+            </thead>
+            <tbody id="usersTable">
+              <tr><td colspan="9" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-danger me-2" role="status"></div>
+                Loading users...
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if (!checkAuth()) throw new Error('unauth');
+    document.getElementById('adminName').textContent = localStorage.getItem('adminName') || '';
+    setActivePage();
+
+    async function loadUsers() {
+      const sortBy = document.getElementById('sortBy').value;
+      const zipFilter = document.getElementById('zipFilter').value;
+
+      let url = '/api/users';
+      const params = new URLSearchParams();
+      if (sortBy) params.set('sortBy', sortBy);
+      if (zipFilter) params.set('zipFilter', zipFilter);
+      if (params.toString()) url += '?' + params.toString();
+
+      const res = await apiFetch(url);
+      if (!res) return;
+      const users = await res.json();
+
+      document.getElementById('userCount').textContent = users.length + ' users';
+
+      const tbody = document.getElementById('usersTable');
+      if (users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No users found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td class="text-muted small">${u.id}</td>
+          <td class="small">${u.maskedEmail}</td>
+          <td class="fw-semibold small">${u.firstName}</td>
+          <td class="text-center small">${u.age ?? '—'}</td>
+          <td class="small">${u.maskedZip ?? '—'}</td>
+          <td class="text-end">${u.totalPoints.toLocaleString()}</td>
+          <td class="text-end">${u.scanCount}</td>
+          <td class="small text-truncate" style="max-width:180px">${u.favoriteRvmLocation}</td>
+          <td class="text-center"><span class="tier-${u.tier.toLowerCase()}">${u.tier}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    async function exportUsers() {
+      const res = await apiFetch('/api/export/users');
+      if (!res || !res.ok) { alert('Export failed.'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'users.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    loadUsers();
+  </script>
+</body>
+</html>

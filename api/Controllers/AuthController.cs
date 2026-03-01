@@ -22,7 +22,7 @@ public class AuthController : ControllerBase
     }
 
     public record LoginRequest(string Email, string Password);
-    public record RegisterRequest(string Email, string Password, string Name);
+    public record RegisterRequest(string Email, string Password, string Name, int? Age = null, string? ZipCode = null);
     public record AuthResponse(string Token, string Role, string Name, int UserId);
 
     // POST /api/auth/admin/login
@@ -33,14 +33,18 @@ public class AuthController : ControllerBase
         conn.Open();
 
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT id FROM admin_users WHERE email = $email AND password_hash = $hash";
+        cmd.CommandText = "SELECT id, password_hash FROM admin_users WHERE email = $email";
         cmd.Parameters.AddWithValue("$email", req.Email.Trim().ToLower());
-        cmd.Parameters.AddWithValue("$hash", HashPassword(req.Password));
 
         using var reader = cmd.ExecuteReader();
         if (!reader.Read()) return Unauthorized(new { error = "Invalid credentials" });
 
         var id = reader.GetInt32(0);
+        var storedHash = reader.GetString(1);
+
+        if (!VerifyPassword(req.Password, storedHash))
+            return Unauthorized(new { error = "Invalid credentials" });
+
         var token = GenerateToken(id, req.Email, "Admin", "admin");
         return Ok(new AuthResponse(token, "admin", "Admin", id));
     }
@@ -64,13 +68,15 @@ public class AuthController : ControllerBase
         var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
         var insertCmd = conn.CreateCommand();
         insertCmd.CommandText = """
-            INSERT INTO users (email, password_hash, name, created_at, total_points)
-            VALUES ($email, $hash, $name, $now, 0)
+            INSERT INTO users (email, password_hash, name, created_at, total_points, age, zip_code)
+            VALUES ($email, $hash, $name, $now, 0, $age, $zip)
         """;
         insertCmd.Parameters.AddWithValue("$email", req.Email.Trim().ToLower());
-        insertCmd.Parameters.AddWithValue("$hash", HashPassword(req.Password));
+        insertCmd.Parameters.AddWithValue("$hash", HashPasswordPbkdf2(req.Password));
         insertCmd.Parameters.AddWithValue("$name", req.Name.Trim());
         insertCmd.Parameters.AddWithValue("$now", now);
+        insertCmd.Parameters.AddWithValue("$age", req.Age.HasValue ? (object)req.Age.Value : DBNull.Value);
+        insertCmd.Parameters.AddWithValue("$zip", req.ZipCode != null ? (object)req.ZipCode.Trim() : DBNull.Value);
         insertCmd.ExecuteNonQuery();
 
         var idCmd = conn.CreateCommand();
@@ -89,15 +95,19 @@ public class AuthController : ControllerBase
         conn.Open();
 
         var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT id, name FROM users WHERE email = $email AND password_hash = $hash";
+        cmd.CommandText = "SELECT id, name, password_hash FROM users WHERE email = $email";
         cmd.Parameters.AddWithValue("$email", req.Email.Trim().ToLower());
-        cmd.Parameters.AddWithValue("$hash", HashPassword(req.Password));
 
         using var reader = cmd.ExecuteReader();
         if (!reader.Read()) return Unauthorized(new { error = "Invalid credentials" });
 
         var id = reader.GetInt32(0);
         var name = reader.GetString(1);
+        var storedHash = reader.GetString(2);
+
+        if (!VerifyPassword(req.Password, storedHash))
+            return Unauthorized(new { error = "Invalid credentials" });
+
         var token = GenerateToken(id, req.Email, name, "user");
         return Ok(new AuthResponse(token, "user", name, id));
     }
@@ -127,6 +137,33 @@ public class AuthController : ControllerBase
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    // Legacy SHA256 hash (used for seeded admin accounts)
     internal static string HashPassword(string password) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(password))).ToLower();
+
+    // New PBKDF2 hash for new registrations
+    internal static string HashPasswordPbkdf2(string password)
+    {
+        var salt = new byte[16];
+        RandomNumberGenerator.Fill(salt);
+        var hash = Rfc2898DeriveBytes.Pbkdf2(
+            Encoding.UTF8.GetBytes(password), salt, 100_000, HashAlgorithmName.SHA256, 32);
+        return $"pbkdf2:{Convert.ToHexString(salt).ToLower()}:{Convert.ToHexString(hash).ToLower()}";
+    }
+
+    internal static bool VerifyPassword(string password, string storedHash)
+    {
+        if (storedHash.StartsWith("pbkdf2:"))
+        {
+            var parts = storedHash.Split(':');
+            if (parts.Length != 3) return false;
+            var salt = Convert.FromHexString(parts[1]);
+            var expectedHash = Convert.FromHexString(parts[2]);
+            var actualHash = Rfc2898DeriveBytes.Pbkdf2(
+                Encoding.UTF8.GetBytes(password), salt, 100_000, HashAlgorithmName.SHA256, 32);
+            return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+        }
+        // Fallback: legacy SHA256
+        return storedHash == HashPassword(password);
+    }
 }

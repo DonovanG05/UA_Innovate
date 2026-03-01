@@ -28,6 +28,7 @@
           <li class="nav-item"><a class="nav-link" href="emissions.html">Emissions</a></li>
           <li class="nav-item"><a class="nav-link" href="rvm-impact.html">RVM Impact</a></li>
           <li class="nav-item"><a class="nav-link" href="ai-insights.html">AI Insights</a></li>
+          <li class="nav-item"><a class="nav-link" href="users.html">Users</a></li>
         </ul>
         <span class="navbar-text me-3 text-white-50 small" id="adminName"></span>
         <button class="btn btn-outline-light btn-sm" onclick="logout()">Logout</button>
@@ -54,10 +55,10 @@
             2. Add New RVMs
             <span class="badge bg-primary" id="rvmVal">0</span>
           </label>
-          <input type="range" class="form-range mb-4" id="rvmSlider" min="0" max="500" value="0" step="10" oninput="updateImpact()">
+          <input type="range" class="form-range mb-4" id="rvmSlider" min="0" max="100" value="0" step="1" oninput="updateImpact()">
 
           <div class="alert alert-info py-2 small mb-0">
-            <strong>Formula:</strong> Each RVM is estimated to reduce <strong>200 MTCO₂e</strong> annually through improved recycling rates and reduced landfill waste.
+            <strong>Formula:</strong> Each RVM reduces ~<strong>15 MTCO₂e</strong> per year (500 items/day × 365 days × 100g CO₂e/item, rounded conservatively).
           </div>
         </div>
       </div>
@@ -103,6 +104,37 @@
                   <div class="h5 fw-bold mb-0 text-success" id="gradeOutlook">—</div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COST CALCULATOR -->
+      <div class="col-12">
+        <div class="card kpi-card p-4" id="costCard" style="display:none!important">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <h6 class="fw-bold mb-1">Investment & ROI Estimate</h6>
+              <p class="small text-muted mb-2">Based on $60,000 per RVM unit (hardware + installation).</p>
+              <div class="row g-3 text-center">
+                <div class="col-4">
+                  <div class="fw-bold fs-5" id="costTotal">—</div>
+                  <div class="small text-muted">Total Investment</div>
+                </div>
+                <div class="col-4">
+                  <div class="fw-bold fs-5 text-success" id="costReduction">—</div>
+                  <div class="small text-muted">MTCO₂e Reduction/yr</div>
+                </div>
+                <div class="col-4">
+                  <div class="fw-bold fs-5" id="costPerMtco2e">—</div>
+                  <div class="small text-muted">$/MTCO₂e offset</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4 text-end">
+              <a href="/api/export/scans" class="btn btn-outline-secondary btn-sm" onclick="return exportCsv('/api/export/scans', 'scans.csv')">
+                Export Scan Data CSV
+              </a>
             </div>
           </div>
         </div>
@@ -163,6 +195,7 @@
     const rvmVal = document.getElementById('rvmVal');
     const qrDiv = document.getElementById('qrcode');
     let qrCode = null;
+    const RVM_COST = 60000;
 
     async function loadAreas() {
       const res = await apiFetch('/api/areas?type=city');
@@ -190,17 +223,41 @@
       document.getElementById('projectedEmissions').textContent = fmt(data.projectedEmissions);
       document.getElementById('percentReduction').textContent = data.percentReduction + '% reduction';
       
-      document.getElementById('impactProgress').style.width = Math.min(100, data.percentReduction * 2) + '%';
-      document.getElementById('impactSummary').textContent = `Deploying ${rvmCount} new RVMs will reduce ${data.areaId === '0' ? 'global' : 'local'} emissions by ${data.percentReduction}%.`;
-      
-      const outlook = data.percentReduction > 15 ? 'Significant (A)' : data.percentReduction > 5 ? 'Positive (B)' : 'Minimal (C)';
+      document.getElementById('impactProgress').style.width = Math.min(100, data.percentReduction * 5) + '%';
+      document.getElementById('impactSummary').textContent = `Deploying ${rvmCount} new RVMs will reduce local emissions by ${data.percentReduction}%.`;
+
+      const outlook = data.percentReduction > 2 ? 'Significant (A)' : data.percentReduction > 0.5 ? 'Positive (B)' : 'Minimal (C)';
       document.getElementById('gradeOutlook').textContent = outlook;
+
+      // Cost calculator
+      if (rvmCount > 0) {
+        const totalCost = rvmCount * RVM_COST;
+        const reduction = data.projectedReduction;
+        const perMtco2e = reduction > 0 ? (totalCost / reduction) : 0;
+        document.getElementById('costCard').style.removeProperty('display');
+        document.getElementById('costTotal').textContent = '$' + totalCost.toLocaleString();
+        document.getElementById('costReduction').textContent = fmt(reduction) + ' MTCO₂e';
+        document.getElementById('costPerMtco2e').textContent = reduction > 0 ? '$' + Math.round(perMtco2e).toLocaleString() : '—';
+      } else {
+        document.getElementById('costCard').style.display = 'none';
+      }
 
       // Also load existing RVMS if area changed
       if (areaSelect.dataset.lastArea !== areaId) {
         loadRvms(areaId);
         areaSelect.dataset.lastArea = areaId;
       }
+    }
+
+    async function exportCsv(path, filename) {
+      const res = await apiFetch(path);
+      if (!res || !res.ok) { alert('Export failed.'); return false; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      return false;
     }
 
     async function loadRvms(areaId) {

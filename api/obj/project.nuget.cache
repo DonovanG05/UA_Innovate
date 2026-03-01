@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Osc/lME4MKg=",
+  "dgSpecHash": "OsHCf4fnepQ=",
   "success": true,
-  "projectFilePath": "C:\\coding\\Uainnovate\\UA_Innovate\\api\\api.csproj",
+  "projectFilePath": "C:\\coding\\uainnovate\\ua_innovate\\api\\api.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\ringe\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.0\\microsoft.aspnetcore.authentication.jwtbearer.8.0.0.nupkg.sha512",
     "C:\\Users\\ringe\\.nuget\\packages\\microsoft.data.sqlite\\10.0.3\\microsoft.data.sqlite.10.0.3.nupkg.sha512",

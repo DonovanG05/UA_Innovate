@@ -3,6 +3,24 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using api.Data;
 
+// Load .env file if present
+var envPath = Path.Combine(AppContext.BaseDirectory, "env", ".env");
+if (!File.Exists(envPath))
+    envPath = Path.Combine(Directory.GetCurrentDirectory(), "env", ".env");
+if (File.Exists(envPath))
+{
+    foreach (var line in File.ReadAllLines(envPath))
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#')) continue;
+        var idx = trimmed.IndexOf('=');
+        if (idx < 0) continue;
+        var key = trimmed[..idx].Trim();
+        var val = trimmed[(idx + 1)..].Trim();
+        Environment.SetEnvironmentVariable(key, val);
+    }
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<api.Data.Database>();

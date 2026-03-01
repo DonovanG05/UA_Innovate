@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using api.Data;
 using System.Security.Claims;
+using System.Linq;
 
 namespace api.Controllers;
 
@@ -16,6 +17,84 @@ public class UsersController : ControllerBase
     public UsersController(Database db)
     {
         _db = db;
+    }
+
+    [HttpGet]
+    [Authorize(Roles = "admin")]
+    public IActionResult GetAllUsers([FromQuery] string? sortBy, [FromQuery] string? zipFilter)
+    {
+        using var conn = _db.Connect();
+        conn.Open();
+
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT u.id, u.email, u.name, u.age, u.zip_code, u.total_points,
+                   COUNT(s.id) as scan_count,
+                   (SELECT m.location_name FROM rvm_scans s2
+                    JOIN rvm_machines m ON s2.rvm_id = m.id
+                    WHERE s2.user_id = u.id
+                    GROUP BY m.location_name ORDER BY COUNT(*) DESC LIMIT 1) as fav_location
+            FROM users u
+            LEFT JOIN rvm_scans s ON s.user_id = u.id
+            GROUP BY u.id
+        """;
+
+        var users = new List<object>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            var id = reader.GetInt32(0);
+            var email = reader.GetString(1);
+            var name = reader.GetString(2);
+            var age = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3);
+            var zip = reader.IsDBNull(4) ? null : reader.GetString(4);
+            var points = reader.GetInt32(5);
+            var scans = reader.GetInt32(6);
+            var favLoc = reader.IsDBNull(7) ? "N/A" : reader.GetString(7);
+
+            // Mask email: j***@example.com
+            var atIdx = email.IndexOf('@');
+            var maskedEmail = atIdx > 0
+                ? email[0] + "***" + email[atIdx..]
+                : "***";
+
+            // First name only
+            var firstName = name.Split(' ')[0];
+
+            // Mask zip: 3**** (first char only)
+            var maskedZip = zip != null && zip.Length > 0 ? zip[0] + new string('*', zip.Length - 1) : null;
+
+            // Tier
+            var tier = scans >= 50 ? "Platinum" : scans >= 20 ? "Gold" : scans >= 5 ? "Silver" : "Bronze";
+
+            users.Add(new
+            {
+                id,
+                maskedEmail,
+                firstName,
+                age,
+                maskedZip,
+                totalPoints = points,
+                scanCount = scans,
+                favoriteRvmLocation = favLoc,
+                tier
+            });
+        }
+
+        // Apply zip filter
+        if (!string.IsNullOrEmpty(zipFilter))
+            users = users.Where(u => ((dynamic)u).maskedZip?.ToString()?.StartsWith(zipFilter[0].ToString()) == true).ToList();
+
+        // Sort
+        users = sortBy switch
+        {
+            "points" => users.OrderByDescending(u => ((dynamic)u).totalPoints).ToList<object>(),
+            "scans" => users.OrderByDescending(u => ((dynamic)u).scanCount).ToList<object>(),
+            "tier" => users.OrderBy(u => ((dynamic)u).tier switch { "Platinum" => 0, "Gold" => 1, "Silver" => 2, _ => 3 }).ToList<object>(),
+            _ => users
+        };
+
+        return Ok(users);
     }
 
     [HttpGet("me")]
