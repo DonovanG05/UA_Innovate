@@ -26,6 +26,7 @@ public static class Seeder
                 InsertMockScans(conn);
             ImportMissingDataForExistingUsers(conn);
             SeedRoleAccounts(conn);
+            SeedDemoUsers(conn);
             return;
         }
 
@@ -269,6 +270,7 @@ public static class Seeder
         adminCmd.Parameters.AddWithValue("$hash", adminHash);
         adminCmd.ExecuteNonQuery();
         SeedRoleAccounts(conn);
+        SeedDemoUsers(conn);
 
         // ── GRADES ───────────────────────────────────────────────────────────
         ComputeGrades(conn);
@@ -636,6 +638,104 @@ public static class Seeder
             cmd.Parameters.AddWithValue("$type", type);
             cmd.Parameters.AddWithValue("$value", value);
             cmd.ExecuteNonQuery();
+        }
+    }
+
+    private static void SeedDemoUsers(SqliteConnection conn)
+    {
+        // 11 demo users spread across all four tiers
+        // Tier thresholds: Platinum ≥50 | Gold ≥20 | Silver ≥5 | Bronze <5
+        var users = new[]
+        {
+            (Email:"sarah.johnson@email.com",  Name:"Sarah Johnson",  Age:31, Zip:"90210", Gender:"F", Scans:35), // 70 pts — Platinum
+            (Email:"marcus.williams@email.com",Name:"Marcus Williams",Age:27, Zip:"77001", Gender:"M", Scans:28), // 56 pts — Platinum
+            (Email:"emily.chen@email.com",     Name:"Emily Chen",     Age:24, Zip:"10001", Gender:"F", Scans:12), // 24 pts — Gold
+            (Email:"james.martinez@email.com", Name:"James Martinez", Age:42, Zip:"85001", Gender:"M", Scans:10), // 20 pts — Gold
+            (Email:"aisha.patel@email.com",    Name:"Aisha Patel",    Age:29, Zip:"30301", Gender:"F", Scans:6),  // 12 pts — Silver
+            (Email:"tyler.brooks@email.com",   Name:"Tyler Brooks",   Age:22, Zip:"60601", Gender:"M", Scans:4),  //  8 pts — Silver
+            (Email:"madison.lee@email.com",    Name:"Madison Lee",    Age:35, Zip:"33101", Gender:"F", Scans:3),  //  6 pts — Silver
+            (Email:"jordan.rivera@email.com",  Name:"Jordan Rivera",  Age:19, Zip:"75201", Gender:"M", Scans:2),  //  4 pts — Bronze
+            (Email:"casey.thompson@email.com", Name:"Casey Thompson", Age:26, Zip:"19101", Gender:"F", Scans:1),  //  2 pts — Bronze
+            (Email:"alex.kim@email.com",       Name:"Alex Kim",       Age:33, Zip:"35203", Gender:"M", Scans:1),  //  2 pts — Bronze
+            (Email:"morgan.davis@email.com",   Name:"Morgan Davis",   Age:21, Zip:"10001", Gender:"F", Scans:0),  //  0 pts — Bronze (new)
+        };
+
+        var passwordHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("Demo1234!"))).ToLower();
+        var rng = new Random(99);
+        var brands = new[] { "Sprite", "Coke", "Diet Coke", "Coke Zero" };
+        var materials = new[] { "plastic", "aluminum" };
+        var baseDate = DateTime.UtcNow.AddMonths(-6);
+
+        // Fetch all RVM IDs once
+        var rvmIds = new List<int>();
+        using (var rCmd = conn.CreateCommand())
+        {
+            rCmd.CommandText = "SELECT id FROM rvm_machines";
+            using var rr = rCmd.ExecuteReader();
+            while (rr.Read()) rvmIds.Add(rr.GetInt32(0));
+        }
+
+        foreach (var u in users)
+        {
+            // Skip if already exists
+            var existsCmd = conn.CreateCommand();
+            existsCmd.CommandText = "SELECT COUNT(*) FROM users WHERE email = $email";
+            existsCmd.Parameters.AddWithValue("$email", u.Email);
+            if ((long)existsCmd.ExecuteScalar()! > 0) continue;
+
+            var now = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+            var qrId = "USER-DEMO-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+            int totalPoints = u.Scans * 2;
+
+            var insUser = conn.CreateCommand();
+            insUser.CommandText = """
+                INSERT INTO users (email, password_hash, name, created_at, total_points, age, zip_code, gender, qr_identifier)
+                VALUES ($email, $hash, $name, $now, $pts, $age, $zip, $gender, $qrId)
+            """;
+            insUser.Parameters.AddWithValue("$email", u.Email);
+            insUser.Parameters.AddWithValue("$hash", passwordHash);
+            insUser.Parameters.AddWithValue("$name", u.Name);
+            insUser.Parameters.AddWithValue("$now", now);
+            insUser.Parameters.AddWithValue("$pts", totalPoints);
+            insUser.Parameters.AddWithValue("$age", u.Age);
+            insUser.Parameters.AddWithValue("$zip", u.Zip);
+            insUser.Parameters.AddWithValue("$gender", u.Gender);
+            insUser.Parameters.AddWithValue("$qrId", qrId);
+            insUser.ExecuteNonQuery();
+
+            var idCmd = conn.CreateCommand();
+            idCmd.CommandText = "SELECT last_insert_rowid()";
+            int userId = (int)(long)idCmd.ExecuteScalar()!;
+
+            for (int i = 0; i < u.Scans; i++)
+            {
+                int rvmId = rvmIds[rng.Next(rvmIds.Count)];
+                var scannedAt = baseDate.AddDays(rng.Next(180)).AddMinutes(rng.Next(1440)).ToString("yyyy-MM-dd HH:mm:ss");
+                var brand = brands[rng.Next(brands.Length)];
+                var material = materials[rng.Next(materials.Length)];
+
+                var insScan = conn.CreateCommand();
+                insScan.CommandText = """
+                    INSERT INTO rvm_scans (rvm_id, user_id, product_barcode, scanned_at, points_awarded, material_type, brand)
+                    VALUES ($rvmId, $userId, $barcode, $scannedAt, 2, $material, $brand)
+                """;
+                insScan.Parameters.AddWithValue("$rvmId", rvmId);
+                insScan.Parameters.AddWithValue("$userId", userId);
+                insScan.Parameters.AddWithValue("$barcode", "DEMO" + rng.Next(100000, 999999));
+                insScan.Parameters.AddWithValue("$scannedAt", scannedAt);
+                insScan.Parameters.AddWithValue("$material", material);
+                insScan.Parameters.AddWithValue("$brand", brand);
+                insScan.ExecuteNonQuery();
+
+                var insReward = conn.CreateCommand();
+                insReward.CommandText = """
+                    INSERT INTO user_rewards (user_id, type, points, description, created_at)
+                    VALUES ($userId, 'earn', 2, 'RVM Bottle Scan', $scannedAt)
+                """;
+                insReward.Parameters.AddWithValue("$userId", userId);
+                insReward.Parameters.AddWithValue("$scannedAt", scannedAt);
+                insReward.ExecuteNonQuery();
+            }
         }
     }
 
